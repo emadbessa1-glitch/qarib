@@ -17,6 +17,7 @@ import '../widgets/approved_places_builder.dart';
 import '../widgets/osm_map.dart';
 import '../widgets/rating_stars.dart';
 import '../widgets/report_dialog.dart';
+import 'add_place_screen.dart';
 import 'chat_screen.dart';
 
 class PlaceDetailsScreen extends StatefulWidget {
@@ -101,6 +102,16 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
       appBar: AppBar(
         title: Text(widget.place.name),
         actions: [
+          if (context.watch<AuthService>().isStaff)
+            IconButton(
+              tooltip: 'تعديل بيانات المكان',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => AddPlaceScreen(editing: widget.place),
+                ),
+              ),
+            ),
           IconButton(
             tooltip: 'إبلاغ عن المكان',
             icon: const Icon(Icons.flag_outlined),

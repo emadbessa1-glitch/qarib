@@ -9,21 +9,34 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // الأدمن = أي إيميل ليه document في collection اسمه admins (اسم الـ document هو الإيميل بحروف صغيرة).
-    // تضيف أدمن أو تشيله من Firebase Console من غير ما تعدّل الكود.
-    function isAdmin() {
-      return signedIn()
-          && request.auth.token.email is string
-          && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
+    // الإدارة = أي إيميل ليه document في collection اسمه admins (اسمه الإيميل بحروف صغيرة).
+    // role = 'admin' (كل الصلاحيات) أو 'manager' (مدير: بلاغات + موافقة + تعديل أماكن، من غير بيانات المستخدمين).
+    // الـ documents القديمة من غير role بتتحسب admin.
+    function staffPath() {
+      return /databases/$(database)/documents/admins/$(request.auth.token.email.lower());
     }
 
-    // كل أدمن يقدر يقرا الـ document بتاعه بس (عشان التطبيق يعرف إنه أدمن).
-    // الإضافة والحذف من Firebase Console بس.
+    function isStaff() {
+      return signedIn()
+          && request.auth.token.email is string
+          && exists(staffPath());
+    }
+
+    function isAdmin() {
+      return isStaff() && get(staffPath()).data.get('role', 'admin') == 'admin';
+    }
+
+    // كل واحد في الإدارة يقرا الـ document بتاعه، والأدمن يشوف القايمة كلها.
+    // الأدمن يضيف أو يشيل مديرين بس (الأدمن نفسهم من Firebase Console).
     match /admins/{adminEmail} {
-      allow read: if signedIn()
-                  && request.auth.token.email is string
-                  && request.auth.token.email.lower() == adminEmail;
-      allow write: if false;
+      allow read: if isAdmin()
+                  || (signedIn()
+                      && request.auth.token.email is string
+                      && request.auth.token.email.lower() == adminEmail);
+      allow create, update: if isAdmin()
+                            && request.resource.data.keys().hasOnly(['role'])
+                            && request.resource.data.role == 'manager';
+      allow delete: if isAdmin() && resource.data.get('role', 'admin') == 'manager';
     }
 
     // بيانات المستخدمين: كل مستخدم يكتب ويقرا بياناته بس، والأدمن يقرا الكل.
@@ -72,13 +85,13 @@ service cloud.firestore {
                     && request.resource.data.reason is string
                     && request.resource.data.reason.size() <= 100
                     && request.resource.data.excerpt.size() <= 500;
-      allow read, delete: if isAdmin();
+      allow read, delete: if isStaff();
     }
 
     match /places/{placeId} {
       // الناس بتشوف المتوافق عليه بس. الأدمن بيشوف كله. صاحب المكان بيشوف مكانه.
       allow read: if resource.data.status == 'approved'
-                  || isAdmin()
+                  || isStaff()
                   || (signedIn() && resource.data.ownerId == request.auth.uid);
 
       // صاحب عمل مسجل بس يقدر يضيف مكان، وبيتسجل pending ومن غير تقييمات.
@@ -92,8 +105,8 @@ service cloud.firestore {
                     && request.resource.data.name.size() > 0
                     && request.resource.data.name.size() < 100;
 
-      // الأدمن يعدّل أي حاجة. غيره يقدر يزوّد عداد التقييم بس (تقييم واحد في المرة، من 1 لـ 5).
-      allow update: if isAdmin()
+      // الإدارة (أدمن أو مدير) تعدّل أي حاجة. غيرهم يقدر يزوّد عداد التقييم بس (تقييم واحد في المرة، من 1 لـ 5).
+      allow update: if isStaff()
                     // صاحب المكان يفعّل أو يقفل الواتساب بس.
                     || (signedIn()
                         && resource.data.ownerId == request.auth.uid
@@ -118,7 +131,7 @@ service cloud.firestore {
                       && request.resource.data.rating >= 1
                       && request.resource.data.rating <= 5
                       && request.resource.data.comment.size() <= 300;
-        allow update, delete: if isAdmin();
+        allow update, delete: if isStaff();
       }
     }
 
@@ -166,8 +179,8 @@ service cloud.firestore {
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
                       && request.resource.data.text.size() <= 1000;
-        // الأدمن بيمسح رسالة اتبلّغ عنها.
-        allow delete: if isAdmin();
+        // الإدارة بتمسح رسالة اتبلّغ عنها.
+        allow delete: if isStaff();
       }
     }
   }

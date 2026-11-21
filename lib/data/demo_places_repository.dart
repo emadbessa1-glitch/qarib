@@ -75,6 +75,21 @@ class DemoPlacesRepository implements PlacesRepository {
   }
 
   @override
+  Future<void> updatePlace(Place place) async {
+    final i = _places.indexWhere((p) => p.id == place.id);
+    if (i == -1) return;
+    final old = _places[i];
+    _places[i] = Place.fromMap(place.id, <String, dynamic>{
+      ...place.toMap(),
+      'status': old.status.id,
+      'ratingSum': old.ratingSum,
+      'ratingCount': old.ratingCount,
+      'ownerId': old.ownerId,
+    });
+    _notify();
+  }
+
+  @override
   Future<void> deletePlace(String placeId) async {
     _places.removeWhere((p) => p.id == placeId);
     _notify();

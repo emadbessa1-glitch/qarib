@@ -9,6 +9,7 @@ import '../models/app_user.dart';
 import '../models/place.dart';
 import '../services/auth_service.dart';
 import '../utils/contact.dart';
+import 'add_place_screen.dart';
 import 'place_details_screen.dart';
 
 /// لوحة الأدمن: مراجعة الأماكن الجديدة والموافقة أو الرفض.
@@ -20,9 +21,11 @@ class AdminScreen extends StatelessWidget {
     final auth = context.watch<AuthService>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('لوحة الأدمن'),
+        title: Text(auth.isStaff
+            ? 'لوحة الإدارة (${auth.staffRole.label})'
+            : 'لوحة الإدارة'),
         actions: [
-          if (auth.isAdmin)
+          if (auth.isStaff)
             IconButton(
               tooltip: 'خروج',
               icon: const Icon(Icons.logout),
@@ -30,7 +33,9 @@ class AdminScreen extends StatelessWidget {
             ),
         ],
       ),
-      body: auth.isAdmin ? const _AdminTabs() : const _AdminLogin(),
+      body: auth.isStaff
+          ? _AdminTabs(isAdmin: auth.isAdmin)
+          : const _AdminLogin(),
     );
   }
 }
@@ -46,6 +51,7 @@ class _AdminLoginState extends State<_AdminLogin> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _firstTime = false;
   String? _error;
 
   @override
@@ -60,13 +66,23 @@ class _AdminLoginState extends State<_AdminLogin> {
       _busy = true;
       _error = null;
     });
+    final auth = context.read<AuthService>();
     try {
-      await context.read<AuthService>().signInAdmin(
-            _email.text,
-            _password.text,
-          );
+      if (_firstTime) {
+        if (_password.text.length < 8) {
+          setState(() => _error = 'الباسورد لازم يكون 8 حروف على الأقل');
+          return;
+        }
+        await auth.createStaffPassword(_email.text, _password.text);
+      } else {
+        await auth.signInAdmin(_email.text, _password.text);
+      }
     } catch (e) {
-      if (mounted) setState(() => _error = 'الدخول فشل: اتأكد من الإيميل والباسورد');
+      if (mounted) {
+        setState(() => _error = _firstTime
+            ? 'معرفناش نعمل الحساب: اتأكد إن الأدمن ضاف إيميلك، أو إن الإيميل مالوش باسورد قبل كده'
+            : 'الدخول فشل: اتأكد من الإيميل والباسورد');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -110,7 +126,17 @@ class _AdminLoginState extends State<_AdminLogin> {
         const SizedBox(height: 16),
         FilledButton(
           onPressed: _busy ? null : _login,
-          child: const Text('دخول'),
+          child: Text(_firstTime ? 'اعمل الباسورد وادخل' : 'دخول'),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: () => setState(() {
+            _firstTime = !_firstTime;
+            _error = null;
+          }),
+          child: Text(_firstTime
+              ? 'عندي باسورد بالفعل'
+              : 'أول مرة؟ (مدير جديد) اعمل باسورد لإيميلك'),
         ),
       ],
     );
@@ -203,6 +229,15 @@ class _PendingListState extends State<_PendingList> {
                           label: const Text('رفض'),
                         ),
                         TextButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => AddPlaceScreen(editing: p),
+                            ),
+                          ),
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('تعديل'),
+                        ),
+                        TextButton.icon(
                           onPressed: () => callPhone(p.phone),
                           icon: const Icon(Icons.call),
                           label: const Text('اتصل للتأكد'),
@@ -229,29 +264,185 @@ class _PendingListState extends State<_PendingList> {
 }
 
 class _AdminTabs extends StatelessWidget {
-  const _AdminTabs();
+  const _AdminTabs({required this.isAdmin});
+
+  /// الأدمن بيشوف كمان المستخدمين والإدارة. المدير لأ.
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
-    return const DefaultTabController(
-      length: 3,
+    return DefaultTabController(
+      length: isAdmin ? 4 : 2,
       child: Column(
         children: [
           TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.fact_check_outlined), text: 'أماكن للمراجعة'),
-              Tab(icon: Icon(Icons.people_outline), text: 'المستخدمين'),
-              Tab(icon: Icon(Icons.flag_outlined), text: 'البلاغات'),
-            ],
             isScrollable: true,
+            tabs: [
+              const Tab(icon: Icon(Icons.fact_check_outlined), text: 'أماكن للمراجعة'),
+              const Tab(icon: Icon(Icons.flag_outlined), text: 'البلاغات'),
+              if (isAdmin) ...const [
+                Tab(icon: Icon(Icons.people_outline), text: 'المستخدمين'),
+                Tab(icon: Icon(Icons.badge_outlined), text: 'الإدارة'),
+              ],
+            ],
           ),
           Expanded(
             child: TabBarView(
-              children: [_PendingList(), _UsersList(), _ReportsList()],
+              children: [
+                const _PendingList(),
+                const _ReportsList(),
+                if (isAdmin) ...const [_UsersList(), _StaffList()],
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// الأدمن بيضيف أو يشيل مديرين.
+class _StaffList extends StatefulWidget {
+  const _StaffList();
+
+  @override
+  State<_StaffList> createState() => _StaffListState();
+}
+
+class _StaffListState extends State<_StaffList> {
+  late final Stream<List<StaffMember>> _staff;
+  final _email = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _staff = context.read<StaffRepository>().watchAll();
+  }
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  Future<void> _add() async {
+    final email = _email.text.trim().toLowerCase();
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('اكتب إيميل صحيح')),
+      );
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<StaffRepository>().addManager(email);
+      _email.clear();
+      messenger.showSnackBar(SnackBar(
+        content: Text('اتضاف $email كمدير. يفتح لوحة الإدارة ويدوس "أول مرة؟" ويعمل باسورد.'),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('الإضافة فشلت، حاول تاني')),
+      );
+    }
+  }
+
+  Future<void> _remove(StaffMember m) async {
+    final repo = context.read<StaffRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('شيل المدير؟'),
+        content: Text('${m.email} مش هيقدر يدخل لوحة الإدارة تاني.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('شيل'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await repo.removeManager(m.email);
+      messenger.showSnackBar(SnackBar(content: Text('اتشال ${m.email}')));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('العملية فشلت، حاول تاني')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  textDirection: TextDirection.ltr,
+                  decoration: const InputDecoration(
+                    labelText: 'إيميل المدير الجديد',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(onPressed: _add, child: const Text('إضافة مدير')),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            'المدير بيقدر يتابع البلاغات، ويوافق على الأماكن، ويعدّل بياناتها. '
+            'مش بيشوف بيانات المستخدمين.',
+          ),
+        ),
+        Expanded(
+          child: StreamBuilder<List<StaffMember>>(
+            stream: _staff,
+            builder: (context, snap) {
+              if (snap.hasError) {
+                return const Center(child: Text('حصلت مشكلة في التحميل'));
+              }
+              if (!snap.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final staff = snap.data!;
+              return ListView(
+                children: [
+                  for (final m in staff)
+                    ListTile(
+                      leading: Icon(m.role == StaffRole.admin
+                          ? Icons.admin_panel_settings
+                          : Icons.badge_outlined),
+                      title: Text(m.email, textDirection: TextDirection.ltr),
+                      subtitle: Text(m.role.label),
+                      trailing: m.role == StaffRole.manager
+                          ? IconButton(
+                              tooltip: 'شيل',
+                              icon: const Icon(Icons.person_remove_outlined),
+                              onPressed: () => _remove(m),
+                            )
+                          : null,
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

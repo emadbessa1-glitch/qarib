@@ -72,6 +72,17 @@ class FirestorePlacesRepository implements PlacesRepository {
   }
 
   @override
+  Future<void> updatePlace(Place place) {
+    final data = place.toMap()
+      ..remove('status')
+      ..remove('ratingSum')
+      ..remove('ratingCount')
+      ..remove('ownerId')
+      ..remove('createdAt');
+    return _places.doc(place.id).update(data);
+  }
+
+  @override
   Future<void> deletePlace(String placeId) => _places.doc(placeId).delete();
 
   @override

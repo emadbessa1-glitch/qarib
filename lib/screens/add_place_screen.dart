@@ -16,7 +16,10 @@ import 'location_picker_screen.dart';
 
 /// صاحب المكان بيسجل مكانه. بيتبعت للأدمن للمراجعة قبل ما يظهر.
 class AddPlaceScreen extends StatefulWidget {
-  const AddPlaceScreen({super.key});
+  const AddPlaceScreen({super.key, this.editing});
+
+  /// لو مش null: الإدارة (أدمن أو مدير) بتعدّل بيانات مكان موجود.
+  final Place? editing;
 
   @override
   State<AddPlaceScreen> createState() => _AddPlaceScreenState();
@@ -44,6 +47,24 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
   @override
   void initState() {
     super.initState();
+    final e = widget.editing;
+    if (e != null) {
+      _name.text = e.name;
+      _category = e.category;
+      _governorate = governorates.contains(e.governorate) ? e.governorate : null;
+      _city = _governorate != null && citiesOf(_governorate!).contains(e.city)
+          ? e.city
+          : null;
+      _area.text = e.area;
+      _address.text = e.address;
+      _phone.text = e.phone;
+      _whatsappEnabled = e.hasWhatsapp;
+      _whatsappSameAsPhone = !e.hasWhatsapp || e.whatsapp == e.phone;
+      _whatsapp.text = e.whatsapp;
+      _hours.text = e.workingHours;
+      _description.text = e.description;
+      _location = e.location;
+    }
     _areasSub = context.read<PlacesRepository>().watchApproved().listen((all) {
       final map = <String, Set<String>>{};
       for (final p in all) {
@@ -125,8 +146,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
     try {
       await auth.ensureSignedIn();
       final phone = digitsOnly(_phone.text);
-      await repo.submitPlace(Place(
-        id: '',
+      final editing = widget.editing;
+      final place = Place(
+        id: editing?.id ?? '',
         name: _name.text.trim(),
         category: _category,
         area: _area.text.trim(),
@@ -141,12 +163,23 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
         lng: _location!.longitude,
         workingHours: _hours.text.trim(),
         description: _description.text.trim(),
-        ownerId: auth.userId,
-        createdAt: DateTime.now(),
-      ));
-      messenger.showSnackBar(const SnackBar(
-        content: Text('تم الإرسال! المكان هيظهر بعد مراجعة الإدارة'),
-      ));
+        ownerId: editing != null ? editing.ownerId : auth.userId,
+        createdAt: editing?.createdAt ?? DateTime.now(),
+        status: editing?.status ?? PlaceStatus.pending,
+        ratingSum: editing?.ratingSum ?? 0,
+        ratingCount: editing?.ratingCount ?? 0,
+      );
+      if (editing != null) {
+        await repo.updatePlace(place);
+        messenger.showSnackBar(
+          const SnackBar(content: Text('اتحفظت التعديلات')),
+        );
+      } else {
+        await repo.submitPlace(place);
+        messenger.showSnackBar(const SnackBar(
+          content: Text('تم الإرسال! المكان هيظهر بعد مراجعة الإدارة'),
+        ));
+      }
       nav.pop();
     } catch (_) {
       messenger.showSnackBar(const SnackBar(
@@ -162,7 +195,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
     const gap = SizedBox(height: 12);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('أضف مكانك')),
+      appBar: AppBar(
+        title: Text(widget.editing == null ? 'أضف مكانك' : 'تعديل بيانات المكان'),
+      ),
       body: Form(
         key: _form,
         child: ListView(
@@ -368,7 +403,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('إرسال للمراجعة'),
+                  : Text(widget.editing == null ? 'إرسال للمراجعة' : 'حفظ التعديلات'),
             ),
           ],
         ),

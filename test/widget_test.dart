@@ -6,12 +6,14 @@ import 'package:qarib/data/reports_repository.dart';
 import 'package:qarib/data/users_repository.dart';
 import 'package:qarib/main.dart';
 import 'package:qarib/models/app_user.dart';
+import 'package:qarib/models/place.dart';
 import 'package:qarib/services/auth_service.dart';
 import 'package:qarib/services/profile_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<QaribApp> _app() async {
   final auth = DemoAuthService();
+  final staff = DemoStaffRepository(auth);
   final users = DemoUsersRepository();
   final profile = ProfileService(auth: auth, users: users);
   await profile.load();
@@ -21,6 +23,7 @@ Future<QaribApp> _app() async {
     chats: DemoChatRepository(),
     reports: DemoReportsRepository(),
     auth: auth,
+    staff: staff,
     profile: profile,
   );
 }
@@ -140,5 +143,44 @@ void main() {
       role: UserRole.business,
     );
     expect(profile.registered, isTrue);
+  });
+
+  test('manager role: staff but not admin; admin adds/removes managers', () async {
+    final auth = DemoAuthService();
+    final staff = DemoStaffRepository(auth);
+    await staff.addManager('Boss@X.com');
+    await auth.signInAdmin('boss@x.com', 'any');
+    expect(auth.staffRole, StaffRole.manager);
+    expect(auth.isStaff, isTrue);
+    expect(auth.isAdmin, isFalse);
+    await auth.signOut();
+
+    await auth.signInAdmin('admin@qarib.app', 'any');
+    expect(auth.isAdmin, isTrue);
+
+    await staff.removeManager('boss@x.com');
+    await auth.signOut();
+    await expectLater(auth.signInAdmin('boss@x.com', 'any'), throwsException);
+    // الأدمن نفسه مايتشالش من هنا.
+    await staff.removeManager('admin@qarib.app');
+    expect((await staff.watchAll().first).map((m) => m.email), contains('admin@qarib.app'));
+  });
+
+  test('staff edit keeps status, ratings and owner', () async {
+    final places = DemoPlacesRepository();
+    final original = (await places.watchApproved().first).first;
+    final edited = Place.fromMap(original.id, {
+      ...original.toMap(),
+      'name': 'اسم جديد',
+      'status': 'pending',
+      'ratingSum': 0,
+      'ratingCount': 0,
+    });
+    await places.updatePlace(edited);
+    final after = (await places.watchApproved().first)
+        .firstWhere((p) => p.id == original.id);
+    expect(after.name, 'اسم جديد');
+    expect(after.status, PlaceStatus.approved);
+    expect(after.ratingCount, original.ratingCount);
   });
 }

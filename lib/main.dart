@@ -25,6 +25,7 @@ Future<void> main() async {
   final ChatRepository chats;
   final ReportsRepository reports;
   final AuthService auth;
+  final StaffRepository staff;
 
   if (AppConfig.useFirebase) {
     await Firebase.initializeApp(
@@ -35,6 +36,7 @@ Future<void> main() async {
     chats = FirestoreChatRepository();
     reports = FirestoreReportsRepository();
     auth = FirebaseAuthService();
+    staff = FirestoreStaffRepository();
     try {
       await auth.ensureSignedIn();
     } catch (_) {
@@ -45,7 +47,9 @@ Future<void> main() async {
     users = DemoUsersRepository();
     chats = DemoChatRepository();
     reports = DemoReportsRepository();
-    auth = DemoAuthService();
+    final demoAuth = DemoAuthService();
+    auth = demoAuth;
+    staff = DemoStaffRepository(demoAuth);
   }
 
   final profile =
@@ -58,6 +62,7 @@ Future<void> main() async {
     chats: chats,
     reports: reports,
     auth: auth,
+    staff: staff,
     profile: profile,
   ));
 }
@@ -70,6 +75,7 @@ class QaribApp extends StatelessWidget {
     required this.chats,
     required this.reports,
     required this.auth,
+    required this.staff,
     required this.profile,
   });
 
@@ -78,6 +84,7 @@ class QaribApp extends StatelessWidget {
   final ChatRepository chats;
   final ReportsRepository reports;
   final AuthService auth;
+  final StaffRepository staff;
   final ProfileService profile;
 
   @override
@@ -88,6 +95,7 @@ class QaribApp extends StatelessWidget {
         Provider<UsersRepository>.value(value: users),
         Provider<ChatRepository>.value(value: chats),
         Provider<ReportsRepository>.value(value: reports),
+        Provider<StaffRepository>.value(value: staff),
         ChangeNotifierProvider<AuthService>.value(value: auth),
         ChangeNotifierProvider<ProfileService>.value(value: profile),
         ChangeNotifierProvider<UpdateService>(

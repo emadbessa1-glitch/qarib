@@ -19,7 +19,7 @@ class StartGate extends StatelessWidget {
     if (!profile.loaded) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    if (profile.registered || auth.isAdmin) {
+    if (profile.registered || auth.isStaff) {
       return const HomeScreen();
     }
     return const RegisterScreen();
