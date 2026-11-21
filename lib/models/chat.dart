@@ -10,6 +10,7 @@ class Chat {
     this.lastMessage = '',
     this.lastSenderId,
     this.updatedAt,
+    this.blockedBy,
   });
 
   final String id;
@@ -21,6 +22,10 @@ class Chat {
   final String lastMessage;
   final String? lastSenderId;
   final DateTime? updatedAt;
+
+  /// لو حد من الطرفين حظر التاني، بيتحط هنا الـ uid بتاعه والرسايل بتقف.
+  final String? blockedBy;
+  bool get isBlocked => blockedBy != null;
 
   static String idFor(String placeId, String userId) => '${placeId}_$userId';
 
@@ -40,6 +45,7 @@ class Chat {
         'lastMessage': lastMessage,
         'lastSenderId': lastSenderId,
         'updatedAt': (updatedAt ?? DateTime.now()).millisecondsSinceEpoch,
+        'blockedBy': blockedBy,
       };
 
   factory Chat.fromMap(String id, Map<String, dynamic> map) => Chat(
@@ -55,6 +61,20 @@ class Chat {
             ? DateTime.fromMillisecondsSinceEpoch(
                 (map['updatedAt'] as num).toInt())
             : null,
+        blockedBy: map['blockedBy'] as String?,
+      );
+
+  Chat withBlockedBy(String? uid) => Chat(
+        id: id,
+        placeId: placeId,
+        placeName: placeName,
+        ownerId: ownerId,
+        userId: userId,
+        userName: userName,
+        lastMessage: lastMessage,
+        lastSenderId: lastSenderId,
+        updatedAt: updatedAt,
+        blockedBy: uid,
       );
 
   Chat copyWith({String? lastMessage, String? lastSenderId, DateTime? updatedAt}) =>
@@ -68,6 +88,7 @@ class Chat {
         lastMessage: lastMessage ?? this.lastMessage,
         lastSenderId: lastSenderId ?? this.lastSenderId,
         updatedAt: updatedAt ?? this.updatedAt,
+        blockedBy: blockedBy,
       );
 }
 

@@ -22,8 +22,11 @@ abstract class UsersRepository {
   /// كل المستخدمين (الأحدث الأول). للأدمن بس.
   Stream<List<AppUser>> watchAll();
 
-  /// الأدمن بيمسح المستخدم، والرقم بيتحرر ويقدر يتسجل تاني.
+  /// الأدمن (أو المستخدم نفسه) بيمسح الحساب، والرقم بيتحرر ويقدر يتسجل تاني.
   Future<void> deleteUser(AppUser user);
+
+  /// بيانات مستخدم معين (المستخدم نفسه أو الأدمن).
+  Future<AppUser?> getProfile(String uid);
 }
 
 class DemoUsersRepository implements UsersRepository {
@@ -52,6 +55,14 @@ class DemoUsersRepository implements UsersRepository {
   Stream<List<AppUser>> watchAll() async* {
     yield _sorted();
     yield* _changes.stream.map((_) => _sorted());
+  }
+
+  @override
+  Future<AppUser?> getProfile(String uid) async {
+    for (final u in _users) {
+      if (u.uid == uid) return u;
+    }
+    return null;
   }
 
   @override
@@ -107,6 +118,12 @@ class FirestoreUsersRepository implements UsersRepository {
       .map((snap) => snap.docs
           .map((d) => AppUser.fromMap(d.id, d.data()))
           .toList(growable: false));
+
+  @override
+  Future<AppUser?> getProfile(String uid) async {
+    final d = await _db.collection('users').doc(uid).get();
+    return d.exists ? AppUser.fromMap(d.id, d.data()!) : null;
+  }
 
   @override
   Future<void> deleteUser(AppUser user) {

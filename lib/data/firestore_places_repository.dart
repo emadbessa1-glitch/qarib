@@ -72,6 +72,9 @@ class FirestorePlacesRepository implements PlacesRepository {
   }
 
   @override
+  Future<void> deletePlace(String placeId) => _places.doc(placeId).delete();
+
+  @override
   Future<void> addReview(Review review) {
     final placeRef = _places.doc(review.placeId);
     final reviewRef = placeRef.collection('reviews').doc();

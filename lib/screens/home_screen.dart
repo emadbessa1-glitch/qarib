@@ -12,8 +12,10 @@ import '../utils/geo.dart';
 import '../widgets/approved_places_builder.dart';
 import '../widgets/place_card.dart';
 import 'add_place_screen.dart';
+import 'account_screen.dart';
 import 'admin_screen.dart';
 import 'chat_screen.dart';
+import 'legal_screen.dart';
 import 'map_screen.dart';
 import 'my_places_screen.dart';
 import 'places_list_screen.dart';
@@ -62,12 +64,34 @@ class HomeScreen extends StatelessWidget {
               MaterialPageRoute<void>(builder: (_) => const MapScreen()),
             ),
           ),
-          IconButton(
-            tooltip: 'لوحة الأدمن',
-            icon: const Icon(Icons.admin_panel_settings_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const AdminScreen()),
+          PopupMenuButton<Widget>(
+            tooltip: 'المزيد',
+            onSelected: (screen) => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => screen),
             ),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: AccountScreen(),
+                child: ListTile(
+                  leading: Icon(Icons.person_outline),
+                  title: Text('حسابي'),
+                ),
+              ),
+              PopupMenuItem(
+                value: LegalScreen.privacy(),
+                child: ListTile(
+                  leading: Icon(Icons.lock_outline),
+                  title: Text('سياسة الخصوصية'),
+                ),
+              ),
+              PopupMenuItem(
+                value: AdminScreen(),
+                child: ListTile(
+                  leading: Icon(Icons.admin_panel_settings_outlined),
+                  title: Text('لوحة الإدارة'),
+                ),
+              ),
+            ],
           ),
         ],
       ),

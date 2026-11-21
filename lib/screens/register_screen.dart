@@ -6,6 +6,7 @@ import '../models/app_user.dart';
 import '../services/profile_service.dart';
 import '../utils/contact.dart';
 import 'admin_screen.dart';
+import 'legal_screen.dart';
 
 final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
@@ -26,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _email = TextEditingController();
   bool _saving = false;
   UserRole _role = UserRole.user;
+  bool _agreed = false;
 
   @override
   void dispose() {
@@ -37,6 +39,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
+    if (!_agreed) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('لازم توافق على سياسة الخصوصية وشروط الاستخدام'),
+      ));
+      return;
+    }
     setState(() => _saving = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -152,6 +160,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 16),
               const PrivacyNote(),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _agreed,
+                onChanged: (v) => setState(() => _agreed = v ?? false),
+                title: const Text('موافق على سياسة الخصوصية وشروط الاستخدام'),
+                subtitle: Wrap(
+                  spacing: 12,
+                  children: [
+                    InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const LegalScreen.privacy(),
+                        ),
+                      ),
+                      child: Text('سياسة الخصوصية',
+                          style: TextStyle(color: theme.colorScheme.primary)),
+                    ),
+                    InkWell(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const LegalScreen.terms(),
+                        ),
+                      ),
+                      child: Text('شروط الاستخدام',
+                          style: TextStyle(color: theme.colorScheme.primary)),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: _saving ? null : _submit,

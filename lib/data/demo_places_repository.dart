@@ -75,6 +75,12 @@ class DemoPlacesRepository implements PlacesRepository {
   }
 
   @override
+  Future<void> deletePlace(String placeId) async {
+    _places.removeWhere((p) => p.id == placeId);
+    _notify();
+  }
+
+  @override
   Future<void> addReview(Review review) async {
     final i = _places.indexWhere((p) => p.id == review.placeId);
     if (i == -1) return;

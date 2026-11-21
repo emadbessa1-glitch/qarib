@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../config.dart';
 import '../data/places_repository.dart';
+import '../data/reports_repository.dart';
 import '../data/users_repository.dart';
 import '../models/app_user.dart';
 import '../models/place.dart';
@@ -233,18 +234,20 @@ class _AdminTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           TabBar(
             tabs: [
               Tab(icon: Icon(Icons.fact_check_outlined), text: 'أماكن للمراجعة'),
               Tab(icon: Icon(Icons.people_outline), text: 'المستخدمين'),
+              Tab(icon: Icon(Icons.flag_outlined), text: 'البلاغات'),
             ],
+            isScrollable: true,
           ),
           Expanded(
             child: TabBarView(
-              children: [_PendingList(), _UsersList()],
+              children: [_PendingList(), _UsersList(), _ReportsList()],
             ),
           ),
         ],
@@ -386,6 +389,126 @@ class _UsersListState extends State<_UsersList> {
                     ),
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+/// البلاغات: الأدمن يمسح المحتوى المسيء أو يقفل البلاغ.
+class _ReportsList extends StatefulWidget {
+  const _ReportsList();
+
+  @override
+  State<_ReportsList> createState() => _ReportsListState();
+}
+
+class _ReportsListState extends State<_ReportsList> {
+  late final Stream<List<Report>> _reports;
+
+  @override
+  void initState() {
+    super.initState();
+    _reports = context.read<ReportsRepository>().watchOpen();
+  }
+
+  Future<void> _run(Future<void> Function() action, String done) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await action();
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('العملية فشلت، حاول تاني')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.read<ReportsRepository>();
+    final places = context.read<PlacesRepository>();
+    return StreamBuilder<List<Report>>(
+      stream: _reports,
+      builder: (context, snap) {
+        if (snap.hasError) {
+          return const Center(child: Text('حصلت مشكلة في التحميل'));
+        }
+        if (!snap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final reports = snap.data!;
+        if (reports.isEmpty) {
+          return const Center(child: Text('مفيش بلاغات 👌'));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(8),
+          itemCount: reports.length,
+          itemBuilder: (context, i) {
+            final r = reports[i];
+            final d = r.createdAt;
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('بلاغ عن ${r.target.label} • ${r.reason}',
+                        style: Theme.of(context).textTheme.titleSmall),
+                    Text('${d.day}/${d.month}/${d.year}',
+                        style: Theme.of(context).textTheme.bodySmall),
+                    if (r.excerpt.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        child: Text(r.excerpt),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        if (r.target == ReportTarget.review)
+                          FilledButton.tonal(
+                            onPressed: () => _run(() async {
+                              await repo.deleteReview(r.placeId, r.itemId);
+                              await repo.dismiss(r.id);
+                            }, 'اتمسح التقييم'),
+                            child: const Text('مسح التقييم'),
+                          ),
+                        if (r.target == ReportTarget.message)
+                          FilledButton.tonal(
+                            onPressed: () => _run(() async {
+                              await repo.deleteMessage(r.chatId, r.itemId);
+                              await repo.dismiss(r.id);
+                            }, 'اتمسحت الرسالة'),
+                            child: const Text('مسح الرسالة'),
+                          ),
+                        if (r.target == ReportTarget.place && r.placeId.isNotEmpty)
+                          FilledButton.tonal(
+                            onPressed: () => _run(() async {
+                              await places.setStatus(
+                                  r.placeId, PlaceStatus.rejected);
+                              await repo.dismiss(r.id);
+                            }, 'المكان اتشال من التطبيق'),
+                            child: const Text('إخفاء المكان'),
+                          ),
+                        OutlinedButton(
+                          onPressed: () =>
+                              _run(() => repo.dismiss(r.id), 'اتقفل البلاغ'),
+                          child: const Text('تجاهل البلاغ'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );

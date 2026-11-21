@@ -43,7 +43,8 @@ service cloud.firestore {
                             && request.resource.data.email.size() <= 100
                             && request.resource.data.email.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$');
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
-      allow delete: if isAdmin();
+      // الأدمن، أو المستخدم بيمسح حسابه.
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
     }
 
     // حجز الأرقام: كل رقم موبايل بيتسجل مرة واحدة كمستخدم ومرة واحدة كصاحب عمل.
@@ -58,7 +59,20 @@ service cloud.firestore {
                     && request.resource.data.phone.matches('^0[0-9]{7,10}$')
                     && claimId == request.resource.data.role + '_' + request.resource.data.phone;
       allow update: if false;
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // البلاغات: أي حد مسجل يبلّغ، والأدمن بس يشوف ويقفل.
+    match /reports/{reportId} {
+      allow create: if signedIn()
+                    && request.resource.data.reporterId == request.auth.uid
+                    && request.resource.data.keys().hasOnly(['target', 'reason', 'reporterId', 'createdAt',
+                                                             'placeId', 'chatId', 'itemId', 'reportedUserId', 'excerpt'])
+                    && request.resource.data.target in ['review', 'message', 'chat', 'place']
+                    && request.resource.data.reason is string
+                    && request.resource.data.reason.size() <= 100
+                    && request.resource.data.excerpt.size() <= 500;
+      allow read, delete: if isAdmin();
     }
 
     match /places/{placeId} {
@@ -94,7 +108,7 @@ service cloud.firestore {
                         && request.resource.data.ratingSum >= resource.data.ratingSum + 1
                         && request.resource.data.ratingSum <= resource.data.ratingSum + 5);
 
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
 
       match /reviews/{reviewId} {
         allow read: if true;
@@ -123,23 +137,37 @@ service cloud.firestore {
                     && request.resource.data.userId == request.auth.uid
                     && chatId == request.resource.data.placeId + '_' + request.auth.uid
                     && request.resource.data.ownerId != request.auth.uid
+                    && request.resource.data.get('blockedBy', null) == null
                     && request.resource.data.ownerId ==
                          get(/databases/$(database)/documents/places/$(request.resource.data.placeId)).data.ownerId
                     && get(/databases/$(database)/documents/places/$(request.resource.data.placeId)).data.status == 'approved'
                     && get(/databases/$(database)/documents/places/$(request.resource.data.placeId)).data.whatsapp == '';
 
       allow update: if isParticipant(resource.data)
-                    && request.resource.data.diff(resource.data).affectedKeys()
+                    && (
+                      // رسالة جديدة (ومش محظورة)
+                      (request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['lastMessage', 'lastSenderId', 'updatedAt'])
-                    && request.resource.data.lastSenderId == request.auth.uid;
+                       && request.resource.data.lastSenderId == request.auth.uid
+                       && resource.data.get('blockedBy', null) == null)
+                      // حظر من أي طرف، وفك الحظر من اللي حظر بس
+                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['blockedBy'])
+                          && ((resource.data.get('blockedBy', null) == null
+                               && request.resource.data.blockedBy == request.auth.uid)
+                              || (resource.data.get('blockedBy', null) == request.auth.uid
+                                  && request.resource.data.blockedBy == null)))
+                    );
 
       match /messages/{messageId} {
         allow read: if isParticipant(get(/databases/$(database)/documents/chats/$(chatId)).data);
         allow create: if isParticipant(get(/databases/$(database)/documents/chats/$(chatId)).data)
+                      && get(/databases/$(database)/documents/chats/$(chatId)).data.get('blockedBy', null) == null
                       && request.resource.data.senderId == request.auth.uid
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
                       && request.resource.data.text.size() <= 1000;
+        // الأدمن بيمسح رسالة اتبلّغ عنها.
+        allow delete: if isAdmin();
       }
     }
   }

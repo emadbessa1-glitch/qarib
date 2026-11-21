@@ -27,6 +27,9 @@ abstract class ChatRepository {
   Stream<List<ChatMessage>> watchMessages(String chatId);
 
   Future<void> send(String chatId, String senderId, String text);
+
+  /// حظر الطرف التاني ([byUid]) أو فك الحظر (null).
+  Future<void> setBlocked(String chatId, String? byUid);
 }
 
 List<Chat> _sortChats(Iterable<Chat> chats) {
@@ -86,6 +89,7 @@ class DemoChatRepository implements ChatRepository {
   Future<void> send(String chatId, String senderId, String text) async {
     final chat = _chats[chatId];
     if (chat == null) throw StateError('المحادثة مش موجودة');
+    if (chat.isBlocked) throw StateError('المحادثة محظورة');
     final now = DateTime.now();
     (_messages[chatId] ??= <ChatMessage>[]).add(ChatMessage(
       id: 'm${_nextId++}',
@@ -95,6 +99,13 @@ class DemoChatRepository implements ChatRepository {
     ));
     _chats[chatId] =
         chat.copyWith(lastMessage: text, lastSenderId: senderId, updatedAt: now);
+    _changes.add(null);
+  }
+  @override
+  Future<void> setBlocked(String chatId, String? byUid) async {
+    final chat = _chats[chatId];
+    if (chat == null) return;
+    _chats[chatId] = chat.withBlockedBy(byUid);
     _changes.add(null);
   }
 }
@@ -205,5 +216,12 @@ class FirestoreChatRepository implements ChatRepository {
         'updatedAt': now.millisecondsSinceEpoch,
       });
     return batch.commit();
+  }
+
+  @override
+  Future<void> setBlocked(String chatId, String? byUid) {
+    return _chats
+        .doc(chatId)
+        .update(<String, dynamic>{'blockedBy': byUid});
   }
 }

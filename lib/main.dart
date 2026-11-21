@@ -8,6 +8,7 @@ import 'data/chat_repository.dart';
 import 'data/demo_places_repository.dart';
 import 'data/firestore_places_repository.dart';
 import 'data/places_repository.dart';
+import 'data/reports_repository.dart';
 import 'data/users_repository.dart';
 import 'firebase_options.dart';
 import 'screens/start_gate.dart';
@@ -22,6 +23,7 @@ Future<void> main() async {
   final PlacesRepository repository;
   final UsersRepository users;
   final ChatRepository chats;
+  final ReportsRepository reports;
   final AuthService auth;
 
   if (AppConfig.useFirebase) {
@@ -31,6 +33,7 @@ Future<void> main() async {
     repository = FirestorePlacesRepository();
     users = FirestoreUsersRepository();
     chats = FirestoreChatRepository();
+    reports = FirestoreReportsRepository();
     auth = FirebaseAuthService();
     try {
       await auth.ensureSignedIn();
@@ -41,16 +44,19 @@ Future<void> main() async {
     repository = DemoPlacesRepository();
     users = DemoUsersRepository();
     chats = DemoChatRepository();
+    reports = DemoReportsRepository();
     auth = DemoAuthService();
   }
 
-  final profile = ProfileService(auth: auth, users: users);
+  final profile =
+      ProfileService(auth: auth, users: users, places: repository);
   await profile.load();
 
   runApp(QaribApp(
     repository: repository,
     users: users,
     chats: chats,
+    reports: reports,
     auth: auth,
     profile: profile,
   ));
@@ -62,6 +68,7 @@ class QaribApp extends StatelessWidget {
     required this.repository,
     required this.users,
     required this.chats,
+    required this.reports,
     required this.auth,
     required this.profile,
   });
@@ -69,6 +76,7 @@ class QaribApp extends StatelessWidget {
   final PlacesRepository repository;
   final UsersRepository users;
   final ChatRepository chats;
+  final ReportsRepository reports;
   final AuthService auth;
   final ProfileService profile;
 
@@ -79,6 +87,7 @@ class QaribApp extends StatelessWidget {
         Provider<PlacesRepository>.value(value: repository),
         Provider<UsersRepository>.value(value: users),
         Provider<ChatRepository>.value(value: chats),
+        Provider<ReportsRepository>.value(value: reports),
         ChangeNotifierProvider<AuthService>.value(value: auth),
         ChangeNotifierProvider<ProfileService>.value(value: profile),
         ChangeNotifierProvider<UpdateService>(

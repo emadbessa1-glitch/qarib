@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qarib/data/chat_repository.dart';
 import 'package:qarib/data/demo_places_repository.dart';
+import 'package:qarib/data/reports_repository.dart';
 import 'package:qarib/models/category.dart';
 import 'package:qarib/models/chat.dart';
 import 'package:qarib/models/place.dart';
@@ -55,5 +56,35 @@ void main() {
     await places.updateWhatsapp('p1', '');
     mine = await places.watchMine('owner').first;
     expect(mine.single.hasWhatsapp, isFalse);
+  });
+
+  test('blocked chat refuses new messages until unblocked', () async {
+    final repo = DemoChatRepository();
+    final id = await repo.openChat(place: _place, userId: 'u1', userName: 'منى');
+    await repo.setBlocked(id, 'owner');
+    expect((await repo.watchChat(id).first)!.isBlocked, isTrue);
+    await expectLater(repo.send(id, 'u1', 'ألو'), throwsStateError);
+    await repo.setBlocked(id, null);
+    await repo.send(id, 'u1', 'ألو');
+    expect(await repo.watchMessages(id).first, hasLength(1));
+  });
+
+  test('reports reach admin and can be dismissed', () async {
+    final reports = DemoReportsRepository();
+    await reports.submit(Report(
+      id: '',
+      target: ReportTarget.review,
+      reason: reportReasons.first,
+      reporterId: 'u1',
+      createdAt: DateTime.now(),
+      placeId: 'p1',
+      itemId: 'rev1',
+    ));
+    final open = await reports.watchOpen().first;
+    expect(open.single.target, ReportTarget.review);
+    await reports.deleteReview('p1', 'rev1');
+    await reports.dismiss(open.single.id);
+    expect(await reports.watchOpen().first, isEmpty);
+    expect(reports.deleted, ['review:p1/rev1']);
   });
 }

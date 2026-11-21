@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qarib/data/chat_repository.dart';
 import 'package:qarib/data/demo_places_repository.dart';
+import 'package:qarib/data/reports_repository.dart';
 import 'package:qarib/data/users_repository.dart';
 import 'package:qarib/main.dart';
 import 'package:qarib/models/app_user.dart';
@@ -18,6 +19,7 @@ Future<QaribApp> _app() async {
     repository: DemoPlacesRepository(),
     users: users,
     chats: DemoChatRepository(),
+    reports: DemoReportsRepository(),
     auth: auth,
     profile: profile,
   );
@@ -38,6 +40,7 @@ void main() {
     );
     expect(find.text('ابدأ'), findsOneWidget);
     expect(find.textContaining('مشفّرة'), findsOneWidget);
+    expect(find.text('موافق على سياسة الخصوصية وشروط الاستخدام'), findsOneWidget);
   });
 
   testWidgets('Registered user goes to home', (tester) async {
@@ -108,5 +111,34 @@ void main() {
     final all = await users.watchAll().first;
     await users.deleteUser(all.firstWhere((u) => u.uid == 'u1'));
     await reg('u2', UserRole.user);
+  });
+
+  test('delete account frees the phone and removes owner places', () async {
+    SharedPreferences.setMockInitialValues({});
+    final auth = DemoAuthService();
+    final users = DemoUsersRepository();
+    final places = DemoPlacesRepository(seed: []);
+    final profile = ProfileService(auth: auth, users: users, places: places);
+    await profile.load();
+    await profile.register(
+      name: 'صاحب',
+      phone: '01099999999',
+      email: 'o@x.com',
+      role: UserRole.business,
+    );
+    expect(profile.phone, '01099999999');
+
+    await profile.deleteAccount();
+    expect(profile.registered, isFalse);
+    expect(await users.watchAll().first, isEmpty);
+
+    // الرقم اتحرر ويقدر يتسجل تاني.
+    await profile.register(
+      name: 'صاحب',
+      phone: '01099999999',
+      email: 'o@x.com',
+      role: UserRole.business,
+    );
+    expect(profile.registered, isTrue);
   });
 }

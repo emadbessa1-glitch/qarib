@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../data/chat_repository.dart';
 import '../data/places_repository.dart';
+import '../data/reports_repository.dart';
 import '../models/place.dart';
 import '../models/review.dart';
 import '../services/auth_service.dart';
@@ -15,6 +16,7 @@ import '../utils/geo.dart';
 import '../widgets/approved_places_builder.dart';
 import '../widgets/osm_map.dart';
 import '../widgets/rating_stars.dart';
+import '../widgets/report_dialog.dart';
 import 'chat_screen.dart';
 
 class PlaceDetailsScreen extends StatefulWidget {
@@ -96,7 +98,22 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
     final user = context.watch<LocationService>().position;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.place.name)),
+      appBar: AppBar(
+        title: Text(widget.place.name),
+        actions: [
+          IconButton(
+            tooltip: 'إبلاغ عن المكان',
+            icon: const Icon(Icons.flag_outlined),
+            onPressed: () => showReportDialog(
+              context,
+              target: ReportTarget.place,
+              placeId: widget.place.id,
+              reportedUserId: widget.place.ownerId ?? '',
+              excerpt: widget.place.name,
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addReview,
         icon: const Icon(Icons.rate_review_outlined),
@@ -288,6 +305,21 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                       ],
                     ),
                     subtitle: r.comment.isEmpty ? null : Text(r.comment),
+                    trailing: r.authorId != null &&
+                            r.authorId == context.read<AuthService>().userId
+                        ? null
+                        : IconButton(
+                            tooltip: 'إبلاغ',
+                            icon: const Icon(Icons.flag_outlined, size: 20),
+                            onPressed: () => showReportDialog(
+                              context,
+                              target: ReportTarget.review,
+                              placeId: widget.place.id,
+                              itemId: r.id,
+                              reportedUserId: r.authorId ?? '',
+                              excerpt: '${r.authorName}: ${r.comment}',
+                            ),
+                          ),
                   ),
               ],
             );

@@ -28,4 +28,7 @@ abstract class PlacesRepository {
 
   /// صاحب المكان بيفعّل الواتساب (برقم) أو يقفله (نص فاضي = الشات جوه التطبيق).
   Future<void> updateWhatsapp(String placeId, String whatsapp);
+
+  /// صاحب المكان (لما يمسح حسابه) أو الأدمن.
+  Future<void> deletePlace(String placeId);
 }
