@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qarib/data/chat_repository.dart';
 import 'package:qarib/data/demo_places_repository.dart';
