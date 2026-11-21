@@ -28,7 +28,8 @@ void main() {
     expect(s.isOpenAt(at(1, 17)), isFalse); // الأحد قبل 6
     expect(s.isOpenAt(at(1, 23)), isTrue);
     expect(s.isOpenAt(at(2, 1)), isTrue); // بعد نص ليل الأحد
-    expect(s.isOpenAt(at(3, 1)), isTrue); // الإثنين 24 ساعة يعدّي لحد 12
+    expect(s.isOpenAt(at(2, 13)), isTrue); // الإثنين 24 ساعة
+    expect(s.isOpenAt(at(3, 1)), isFalse); // الـ 24 ساعة بتخلص 12 بالليل
     expect(s.isOpenAt(at(3, 13)), isFalse); // الثلاثاء مقفول
     expect(s.isOpenAt(at(6, 12)), isFalse); // الجمعة مقفول
   });
