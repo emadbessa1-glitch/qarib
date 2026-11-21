@@ -64,10 +64,10 @@ void main() {
         exit(1);
       }
       const props = '''
-val keystoreProperties = java.util.Properties()
+val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 ''';
@@ -81,6 +81,8 @@ if (keystorePropertiesFile.exists()) {
     }
 
     buildTypes {''';
+      // داخل Gradle Kotlin الكلمة java بتشاور على حاجة تانية، فلازم imports في أول الملف.
+      gradle = 'import java.io.FileInputStream\nimport java.util.Properties\n\n$gradle';
       gradle = gradle
           .replaceFirst('android {', '${props}android {')
           .replaceFirst('buildTypes {', signing)
