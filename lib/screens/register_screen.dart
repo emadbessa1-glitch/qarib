@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/users_repository.dart';
 import '../models/app_user.dart';
 import '../services/profile_service.dart';
 import '../utils/contact.dart';
@@ -45,6 +46,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             email: _email.text,
             role: _role,
           );
+    } on PhoneTakenException {
+      messenger.showSnackBar(SnackBar(
+        content: Text(_role == UserRole.business
+            ? 'الرقم ده متسجل قبل كده كصاحب عمل. لو ده رقمك كلّم إدارة التطبيق.'
+            : 'الرقم ده متسجل قبل كده. لو ده رقمك كلّم إدارة التطبيق.'),
+      ));
     } catch (_) {
       messenger.showSnackBar(const SnackBar(
         content: Text('معرفناش نحفظ بياناتك، اتأكد من النت وحاول تاني'),

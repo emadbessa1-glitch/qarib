@@ -277,6 +277,40 @@ class _UsersListState extends State<_UsersList> {
     super.dispose();
   }
 
+  Future<void> _confirmDelete(AppUser u) async {
+    final repo = context.read<UsersRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('مسح المستخدم؟'),
+        content: Text(
+          'هيتمسح ${u.name} (${u.phone})، والرقم هيقدر يتسجل تاني '
+          'كـ${u.role.label}. مش هينفع ترجّعه بعد المسح.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('مسح'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await repo.deleteUser(u);
+      messenger.showSnackBar(SnackBar(content: Text('اتمسح ${u.name}')));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('المسح فشل، حاول تاني')),
+      );
+    }
+  }
+
   String _date(DateTime d) =>
       '${d.day}/${d.month}/${d.year}';
 
@@ -332,10 +366,20 @@ class _UsersListState extends State<_UsersList> {
                             '${u.phone}\n${u.email}\nسجّل: ${_date(u.createdAt)}',
                           ),
                           isThreeLine: true,
-                          trailing: IconButton(
-                            tooltip: 'اتصال',
-                            icon: const Icon(Icons.call),
-                            onPressed: () => callPhone(u.phone),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: 'اتصال',
+                                icon: const Icon(Icons.call),
+                                onPressed: () => callPhone(u.phone),
+                              ),
+                              IconButton(
+                                tooltip: 'مسح المستخدم',
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () => _confirmDelete(u),
+                              ),
+                            ],
                           ),
                         );
                       },

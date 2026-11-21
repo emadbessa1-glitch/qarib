@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/users_repository.dart';
 import '../models/app_user.dart';
+import '../utils/contact.dart';
 import 'auth_service.dart';
 
 /// بيتابع هل المستخدم سجّل بياناته ولا لأ.
@@ -51,10 +52,10 @@ class ProfileService extends ChangeNotifier {
     if (uid == null) {
       throw StateError('مش متسجل دخول');
     }
-    await users.saveProfile(AppUser(
+    await users.register(AppUser(
       uid: uid,
       name: name.trim(),
-      phone: phone.trim(),
+      phone: digitsOnly(phone),
       email: email.trim().toLowerCase(),
       role: role,
       createdAt: DateTime.now(),

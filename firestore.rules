@@ -30,6 +30,8 @@ service cloud.firestore {
     match /users/{uid} {
       allow create, update: if signedIn()
                             && request.auth.uid == uid
+                            // الرقم لازم يكون محجوز لنفس الحساب (رقم واحد لكل نوع حساب)
+                            && getAfter(/databases/$(database)/documents/phoneClaims/$(request.resource.data.role + '_' + request.resource.data.phone)).data.uid == request.auth.uid
                             && request.resource.data.keys().hasOnly(['name', 'phone', 'email', 'role', 'createdAt'])
                             && request.resource.data.role in ['user', 'business']
                             && request.resource.data.name is string
@@ -41,6 +43,21 @@ service cloud.firestore {
                             && request.resource.data.email.size() <= 100
                             && request.resource.data.email.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$');
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow delete: if isAdmin();
+    }
+
+    // حجز الأرقام: كل رقم موبايل بيتسجل مرة واحدة كمستخدم ومرة واحدة كصاحب عمل.
+    // الاسم: role_phone (مثلاً user_01012345678).
+    match /phoneClaims/{claimId} {
+      allow read: if isAdmin()
+                  || (signedIn() && (resource == null || resource.data.uid == request.auth.uid));
+      allow create: if signedIn()
+                    && request.resource.data.keys().hasOnly(['uid', 'role', 'phone'])
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.role in ['user', 'business']
+                    && request.resource.data.phone.matches('^0[0-9]{7,10}$')
+                    && claimId == request.resource.data.role + '_' + request.resource.data.phone;
+      allow update: if false;
       allow delete: if isAdmin();
     }
 

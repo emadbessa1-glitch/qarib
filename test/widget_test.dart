@@ -83,4 +83,30 @@ void main() {
     expect(saved.single.phone, '01012345678');
     expect(saved.single.role, UserRole.business);
   });
+
+  test('same phone cannot register twice with the same role', () async {
+    final users = DemoUsersRepository();
+    Future<void> reg(String uid, UserRole role) => users.register(AppUser(
+          uid: uid,
+          name: 'اسم',
+          phone: '01012345678',
+          email: 'a@b.com',
+          role: role,
+          createdAt: DateTime.now(),
+        ));
+
+    await reg('u1', UserRole.user);
+    // نفس الحساب يقدر يحدّث بياناته.
+    await reg('u1', UserRole.user);
+    // حساب تاني بنفس الرقم كمستخدم: مرفوض.
+    await expectLater(reg('u2', UserRole.user), throwsA(isA<PhoneTakenException>()));
+    // نفس الرقم كصاحب عمل: مسموح مرة واحدة.
+    await reg('u3', UserRole.business);
+    await expectLater(reg('u4', UserRole.business), throwsA(isA<PhoneTakenException>()));
+
+    // بعد ما الأدمن يمسح المستخدم، الرقم يتحرر.
+    final all = await users.watchAll().first;
+    await users.deleteUser(all.firstWhere((u) => u.uid == 'u1'));
+    await reg('u2', UserRole.user);
+  });
 }
