@@ -3,12 +3,15 @@ import 'package:provider/provider.dart';
 
 import '../models/category.dart';
 import '../services/location_service.dart';
+import '../services/profile_service.dart';
 import '../utils/geo.dart';
 import '../widgets/approved_places_builder.dart';
 import '../widgets/place_card.dart';
 import 'add_place_screen.dart';
 import 'admin_screen.dart';
+import 'chat_screen.dart';
 import 'map_screen.dart';
+import 'my_places_screen.dart';
 import 'places_list_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -25,11 +28,27 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = context.watch<LocationService>();
+    final isBusiness = context.watch<ProfileService>().isBusiness;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('قريب'),
         actions: [
+          IconButton(
+            tooltip: 'المحادثات',
+            icon: const Icon(Icons.forum_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const InboxScreen()),
+            ),
+          ),
+          if (isBusiness)
+            IconButton(
+              tooltip: 'أماكني',
+              icon: const Icon(Icons.storefront_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const MyPlacesScreen()),
+              ),
+            ),
           IconButton(
             tooltip: 'الخريطة',
             icon: const Icon(Icons.map_outlined),
@@ -46,13 +65,15 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const AddPlaceScreen()),
-        ),
-        icon: const Icon(Icons.add_business),
-        label: const Text('أضف مكانك'),
-      ),
+      floatingActionButton: isBusiness
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const AddPlaceScreen()),
+              ),
+              icon: const Icon(Icons.add_business),
+              label: const Text('أضف مكانك'),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: location.refresh,
         child: ListView(

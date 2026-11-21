@@ -15,10 +15,12 @@ class ProfileService extends ChangeNotifier {
 
   static const _kRegistered = 'profile.registered';
   static const _kName = 'profile.name';
+  static const _kRole = 'profile.role';
 
   bool _loaded = false;
   bool _registered = false;
   String _name = '';
+  UserRole _role = UserRole.user;
 
   bool get loaded => _loaded;
   bool get registered => _registered;
@@ -26,10 +28,14 @@ class ProfileService extends ChangeNotifier {
   /// اسم المستخدم المسجل (بيتكتب لوحده في التقييمات).
   String get name => _name;
 
+  UserRole get role => _role;
+  bool get isBusiness => _role == UserRole.business;
+
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     _registered = prefs.getBool(_kRegistered) ?? false;
     _name = prefs.getString(_kName) ?? '';
+    _role = UserRole.fromId(prefs.getString(_kRole));
     _loaded = true;
     notifyListeners();
   }
@@ -38,6 +44,7 @@ class ProfileService extends ChangeNotifier {
     required String name,
     required String phone,
     required String email,
+    UserRole role = UserRole.user,
   }) async {
     await auth.ensureSignedIn();
     final uid = auth.userId;
@@ -49,13 +56,16 @@ class ProfileService extends ChangeNotifier {
       name: name.trim(),
       phone: phone.trim(),
       email: email.trim().toLowerCase(),
+      role: role,
       createdAt: DateTime.now(),
     ));
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kRegistered, true);
     await prefs.setString(_kName, name.trim());
+    await prefs.setString(_kRole, role.id);
     _registered = true;
     _name = name.trim();
+    _role = role;
     notifyListeners();
   }
 }

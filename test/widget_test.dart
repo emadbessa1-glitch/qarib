@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qarib/data/chat_repository.dart';
 import 'package:qarib/data/demo_places_repository.dart';
 import 'package:qarib/data/users_repository.dart';
 import 'package:qarib/main.dart';
+import 'package:qarib/models/app_user.dart';
 import 'package:qarib/services/auth_service.dart';
 import 'package:qarib/services/profile_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +16,7 @@ Future<QaribApp> _app() async {
   return QaribApp(
     repository: DemoPlacesRepository(),
     users: users,
+    chats: DemoChatRepository(),
     auth: auth,
     profile: profile,
   );
@@ -36,6 +39,17 @@ void main() {
 
     expect(find.text('قريب'), findsOneWidget);
     expect(find.text('صيدليات'), findsOneWidget);
+    // المستخدم العادي مالوش زرار إضافة مكان.
+    expect(find.text('أضف مكانك'), findsNothing);
+  });
+
+  testWidgets('Business owner sees add-place button', (tester) async {
+    SharedPreferences.setMockInitialValues(
+        {'profile.registered': true, 'profile.role': 'business'});
+    await tester.pumpWidget(await _app());
+    await tester.pump();
+
+    expect(find.text('أضف مكانك'), findsOneWidget);
   });
 
   test('register saves profile and marks device registered', () async {
@@ -50,12 +64,15 @@ void main() {
       name: 'أحمد',
       phone: '01012345678',
       email: 'Ahmed@Example.com',
+      role: UserRole.business,
     );
 
     expect(profile.registered, isTrue);
     expect(profile.name, 'أحمد');
+    expect(profile.isBusiness, isTrue);
     final saved = await users.watchAll().first;
     expect(saved.single.email, 'ahmed@example.com');
     expect(saved.single.phone, '01012345678');
+    expect(saved.single.role, UserRole.business);
   });
 }

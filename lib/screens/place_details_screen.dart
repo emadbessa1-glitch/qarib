@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../data/chat_repository.dart';
 import '../data/places_repository.dart';
 import '../models/place.dart';
 import '../models/review.dart';
@@ -14,6 +15,7 @@ import '../utils/geo.dart';
 import '../widgets/approved_places_builder.dart';
 import '../widgets/osm_map.dart';
 import '../widgets/rating_stars.dart';
+import 'chat_screen.dart';
 
 class PlaceDetailsScreen extends StatefulWidget {
   const PlaceDetailsScreen({super.key, required this.place});
@@ -66,6 +68,29 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
     }
   }
 
+  Future<void> _openChat(Place place) async {
+    final auth = context.read<AuthService>();
+    final chats = context.read<ChatRepository>();
+    final name = context.read<ProfileService>().name;
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await auth.ensureSignedIn();
+      final chatId = await chats.openChat(
+        place: place,
+        userId: auth.userId!,
+        userName: name.isEmpty ? 'عميل' : name,
+      );
+      nav.push(MaterialPageRoute<void>(
+        builder: (_) => ChatScreen(chatId: chatId, title: place.name),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('معرفناش نفتح المحادثة، حاول تاني')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<LocationService>().position;
@@ -92,6 +117,10 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
 
   Widget _buildBody(BuildContext context, Place place, LatLng? user) {
     final theme = Theme.of(context);
+    final myId = context.watch<AuthService>().userId;
+    final canChat = !place.hasWhatsapp &&
+        (place.ownerId ?? '').isNotEmpty &&
+        place.ownerId != myId;
     final distance = user == null
         ? null
         : formatDistance(metersBetween(user, place.location));
@@ -138,6 +167,16 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
                   label: const Text('اتصال'),
                 ),
               ),
+              if (canChat) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: () => _openChat(place),
+                    icon: const Icon(Icons.forum),
+                    label: const Text('راسلهم'),
+                  ),
+                ),
+              ],
               if (place.hasWhatsapp) ...[
                 const SizedBox(width: 8),
                 Expanded(

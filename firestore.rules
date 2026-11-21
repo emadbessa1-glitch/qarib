@@ -30,7 +30,8 @@ service cloud.firestore {
     match /users/{uid} {
       allow create, update: if signedIn()
                             && request.auth.uid == uid
-                            && request.resource.data.keys().hasOnly(['name', 'phone', 'email', 'createdAt'])
+                            && request.resource.data.keys().hasOnly(['name', 'phone', 'email', 'role', 'createdAt'])
+                            && request.resource.data.role in ['user', 'business']
                             && request.resource.data.name is string
                             && request.resource.data.name.size() >= 2
                             && request.resource.data.name.size() <= 60
@@ -49,8 +50,9 @@ service cloud.firestore {
                   || isAdmin()
                   || (signedIn() && resource.data.ownerId == request.auth.uid);
 
-      // أي حد مسجل دخول (حتى Anonymous) يقدر يضيف مكان، بس بيتسجل pending ومن غير تقييمات.
+      // صاحب عمل مسجل بس يقدر يضيف مكان، وبيتسجل pending ومن غير تقييمات.
       allow create: if signedIn()
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'business'
                     && request.resource.data.status == 'pending'
                     && request.resource.data.ownerId == request.auth.uid
                     && request.resource.data.ratingSum == 0
@@ -61,6 +63,12 @@ service cloud.firestore {
 
       // الأدمن يعدّل أي حاجة. غيره يقدر يزوّد عداد التقييم بس (تقييم واحد في المرة، من 1 لـ 5).
       allow update: if isAdmin()
+                    // صاحب المكان يفعّل أو يقفل الواتساب بس.
+                    || (signedIn()
+                        && resource.data.ownerId == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['whatsapp'])
+                        && request.resource.data.whatsapp is string
+                        && request.resource.data.whatsapp.size() <= 15)
                     || (signedIn()
                         && resource.data.status == 'approved'
                         && request.resource.data.diff(resource.data).affectedKeys()
@@ -80,6 +88,41 @@ service cloud.firestore {
                       && request.resource.data.rating <= 5
                       && request.resource.data.comment.size() <= 300;
         allow update, delete: if isAdmin();
+      }
+    }
+
+    // الشات: المستخدم وصاحب المكان بس يشوفوا المحادثة ويكتبوا فيها.
+    // بتتفتح بس مع مكان متوافق عليه ومقفول فيه الواتساب.
+    function isParticipant(chat) {
+      return signedIn()
+          && (request.auth.uid == chat.userId || request.auth.uid == chat.ownerId);
+    }
+
+    match /chats/{chatId} {
+      // resource == null عشان التطبيق يقدر يعرف إن المحادثة لسه مش موجودة.
+      allow read: if resource == null || isParticipant(resource.data);
+
+      allow create: if signedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && chatId == request.resource.data.placeId + '_' + request.auth.uid
+                    && request.resource.data.ownerId != request.auth.uid
+                    && request.resource.data.ownerId ==
+                         get(/databases/$(database)/documents/places/$(request.resource.data.placeId)).data.ownerId
+                    && get(/databases/$(database)/documents/places/$(request.resource.data.placeId)).data.status == 'approved'
+                    && get(/databases/$(database)/documents/places/$(request.resource.data.placeId)).data.whatsapp == '';
+
+      allow update: if isParticipant(resource.data)
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['lastMessage', 'lastSenderId', 'updatedAt'])
+                    && request.resource.data.lastSenderId == request.auth.uid;
+
+      match /messages/{messageId} {
+        allow read: if isParticipant(get(/databases/$(database)/documents/chats/$(chatId)).data);
+        allow create: if isParticipant(get(/databases/$(database)/documents/chats/$(chatId)).data)
+                      && request.resource.data.senderId == request.auth.uid
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 1000;
       }
     }
   }

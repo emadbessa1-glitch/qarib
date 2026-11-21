@@ -70,6 +70,7 @@ class Place {
 
   Place copyWith({
     String? id,
+    String? whatsapp,
     PlaceStatus? status,
     int? ratingSum,
     int? ratingCount,
@@ -81,7 +82,7 @@ class Place {
       area: area,
       address: address,
       phone: phone,
-      whatsapp: whatsapp,
+      whatsapp: whatsapp ?? this.whatsapp,
       lat: lat,
       lng: lng,
       description: description,

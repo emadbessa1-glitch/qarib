@@ -62,6 +62,19 @@ class DemoPlacesRepository implements PlacesRepository {
   }
 
   @override
+  Stream<List<Place>> watchMine(String ownerId) => _watch(
+        () => _places.where((p) => p.ownerId == ownerId).toList(growable: false),
+      );
+
+  @override
+  Future<void> updateWhatsapp(String placeId, String whatsapp) async {
+    final i = _places.indexWhere((p) => p.id == placeId);
+    if (i == -1) return;
+    _places[i] = _places[i].copyWith(whatsapp: whatsapp);
+    _notify();
+  }
+
+  @override
   Future<void> addReview(Review review) async {
     final i = _places.indexWhere((p) => p.id == review.placeId);
     if (i == -1) return;
@@ -101,6 +114,7 @@ final List<Place> demoPlaces = <Place>[
     address: 'شارع 9',
     phone: '01000000002',
     whatsapp: '',
+    ownerId: 'demo-owner',
     lat: 29.9602,
     lng: 31.2569,
     workingHours: '9 ص - 2 بعد نص الليل',

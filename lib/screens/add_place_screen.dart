@@ -30,6 +30,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
   final _description = TextEditingController();
 
   PlaceCategory _category = PlaceCategory.pharmacy;
+  bool _whatsappEnabled = true;
   bool _whatsappSameAsPhone = true;
   LatLng? _location;
   bool _saving = false;
@@ -102,7 +103,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
         area: _area.text.trim(),
         address: _address.text.trim(),
         phone: phone,
-        whatsapp: _whatsappSameAsPhone ? phone : digitsOnly(_whatsapp.text),
+        whatsapp: !_whatsappEnabled
+            ? ''
+            : (_whatsappSameAsPhone ? phone : digitsOnly(_whatsapp.text)),
         lat: _location!.latitude,
         lng: _location!.longitude,
         workingHours: _hours.text.trim(),
@@ -176,24 +179,30 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
               decoration: const InputDecoration(labelText: 'رقم التليفون'),
               validator: _phoneValidator,
             ),
-            CheckboxListTile(
+            SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              value: _whatsappSameAsPhone,
-              onChanged: (v) =>
-                  setState(() => _whatsappSameAsPhone = v ?? true),
-              title: const Text('نفس الرقم عليه واتساب'),
+              value: _whatsappEnabled,
+              onChanged: (v) => setState(() => _whatsappEnabled = v),
+              title: const Text('تفعيل التواصل بالواتساب'),
+              subtitle: Text(_whatsappEnabled
+                  ? 'العملاء هيكلموك على الواتساب'
+                  : 'العملاء هيكلموك بالشات جوه التطبيق'),
             ),
-            if (!_whatsappSameAsPhone) ...[
+            if (_whatsappEnabled)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _whatsappSameAsPhone,
+                onChanged: (v) =>
+                    setState(() => _whatsappSameAsPhone = v ?? true),
+                title: const Text('الواتساب على نفس رقم التليفون'),
+              ),
+            if (_whatsappEnabled && !_whatsappSameAsPhone) ...[
               TextFormField(
                 controller: _whatsapp,
                 keyboardType: TextInputType.phone,
                 textDirection: TextDirection.ltr,
-                decoration: const InputDecoration(
-                  labelText: 'رقم الواتساب (اختياري)',
-                ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? null
-                    : _phoneValidator(v),
+                decoration: const InputDecoration(labelText: 'رقم الواتساب'),
+                validator: _phoneValidator,
               ),
               gap,
             ],

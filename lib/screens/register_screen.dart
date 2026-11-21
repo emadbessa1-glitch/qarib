@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/app_user.dart';
 import '../services/profile_service.dart';
 import '../utils/contact.dart';
 import 'admin_screen.dart';
@@ -23,6 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phone = TextEditingController();
   final _email = TextEditingController();
   bool _saving = false;
+  UserRole _role = UserRole.user;
 
   @override
   void dispose() {
@@ -41,6 +43,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             name: _name.text,
             phone: digitsOnly(_phone.text),
             email: _email.text,
+            role: _role,
           );
     } catch (_) {
       messenger.showSnackBar(const SnackBar(
@@ -75,6 +78,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
+              Text('إنت مين؟', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              SegmentedButton<UserRole>(
+                segments: const [
+                  ButtonSegment(
+                    value: UserRole.user,
+                    icon: Icon(Icons.search),
+                    label: Text('بدوّر على خدمة'),
+                  ),
+                  ButtonSegment(
+                    value: UserRole.business,
+                    icon: Icon(Icons.storefront),
+                    label: Text('صاحب عمل'),
+                  ),
+                ],
+                selected: {_role},
+                onSelectionChanged: (s) => setState(() => _role = s.first),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _role == UserRole.business
+                    ? 'هتقدر تضيف مكانك، وترد على العملاء بالشات أو الواتساب.'
+                    : 'هتقدر تدوّر على الخدمات القريبة منك وتتواصل معاهم.',
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _name,
                 textInputAction: TextInputAction.next,

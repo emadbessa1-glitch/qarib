@@ -59,6 +59,19 @@ class FirestorePlacesRepository implements PlacesRepository {
   }
 
   @override
+  Stream<List<Place>> watchMine(String ownerId) => _places
+      .where('ownerId', isEqualTo: ownerId)
+      .snapshots()
+      .map(_toPlaces);
+
+  @override
+  Future<void> updateWhatsapp(String placeId, String whatsapp) {
+    return _places
+        .doc(placeId)
+        .update(<String, dynamic>{'whatsapp': whatsapp});
+  }
+
+  @override
   Future<void> addReview(Review review) {
     final placeRef = _places.doc(review.placeId);
     final reviewRef = placeRef.collection('reviews').doc();

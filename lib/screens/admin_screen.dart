@@ -327,7 +327,7 @@ class _UsersListState extends State<_UsersList> {
                         final u = users[i];
                         return ListTile(
                           leading: const CircleAvatar(child: Icon(Icons.person)),
-                          title: Text(u.name),
+                          title: Text('${u.name} • ${u.role.label}'),
                           subtitle: Text(
                             '${u.phone}\n${u.email}\nسجّل: ${_date(u.createdAt)}',
                           ),

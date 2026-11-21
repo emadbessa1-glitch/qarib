@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'config.dart';
+import 'data/chat_repository.dart';
 import 'data/demo_places_repository.dart';
 import 'data/firestore_places_repository.dart';
 import 'data/places_repository.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
 
   final PlacesRepository repository;
   final UsersRepository users;
+  final ChatRepository chats;
   final AuthService auth;
 
   if (AppConfig.useFirebase) {
@@ -27,6 +29,7 @@ Future<void> main() async {
     );
     repository = FirestorePlacesRepository();
     users = FirestoreUsersRepository();
+    chats = FirestoreChatRepository();
     auth = FirebaseAuthService();
     try {
       await auth.ensureSignedIn();
@@ -36,6 +39,7 @@ Future<void> main() async {
   } else {
     repository = DemoPlacesRepository();
     users = DemoUsersRepository();
+    chats = DemoChatRepository();
     auth = DemoAuthService();
   }
 
@@ -45,6 +49,7 @@ Future<void> main() async {
   runApp(QaribApp(
     repository: repository,
     users: users,
+    chats: chats,
     auth: auth,
     profile: profile,
   ));
@@ -55,12 +60,14 @@ class QaribApp extends StatelessWidget {
     super.key,
     required this.repository,
     required this.users,
+    required this.chats,
     required this.auth,
     required this.profile,
   });
 
   final PlacesRepository repository;
   final UsersRepository users;
+  final ChatRepository chats;
   final AuthService auth;
   final ProfileService profile;
 
@@ -70,6 +77,7 @@ class QaribApp extends StatelessWidget {
       providers: [
         Provider<PlacesRepository>.value(value: repository),
         Provider<UsersRepository>.value(value: users),
+        Provider<ChatRepository>.value(value: chats),
         ChangeNotifierProvider<AuthService>.value(value: auth),
         ChangeNotifierProvider<ProfileService>.value(value: profile),
         ChangeNotifierProvider<LocationService>(
