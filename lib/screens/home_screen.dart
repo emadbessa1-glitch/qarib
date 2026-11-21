@@ -1,3 +1,5 @@
+import 'dart:ffi' show Abi;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -276,7 +278,9 @@ class _UpdateBanner extends StatelessWidget {
         subtitle: const Text('نزّل آخر نسخة عشان تاخد آخر المميزات'),
         trailing: FilledButton(
           onPressed: () => launchUrl(
-            Uri.parse(AppConfig.latestApkUrl),
+            Uri.parse(Abi.current() == Abi.androidArm
+                ? AppConfig.latestApkUrlArm32
+                : AppConfig.latestApkUrl),
             mode: LaunchMode.externalApplication,
           ),
           child: const Text('تحديث'),

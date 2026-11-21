@@ -21,10 +21,17 @@ class UpdateService extends ChangeNotifier {
     return m == null ? null : int.tryParse(m.group(1)!);
   }
 
+  /// مع --split-per-abi أندرويد بيزوّد رقم النسخة (ABI × 1000)،
+  /// فبناخد آخر 3 أرقام عشان نقارن برقم البناء الحقيقي.
+  static int? currentBuildFrom(String buildNumber) {
+    final n = int.tryParse(buildNumber);
+    return n == null ? null : n % 1000;
+  }
+
   Future<void> check() async {
     try {
       final info = await PackageInfo.fromPlatform();
-      _current = int.tryParse(info.buildNumber);
+      _current = currentBuildFrom(info.buildNumber);
       final res = await http
           .get(Uri.parse(AppConfig.latestReleaseApi))
           .timeout(const Duration(seconds: 10));

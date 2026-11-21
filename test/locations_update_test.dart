@@ -17,11 +17,14 @@ void main() {
   test('parse build number from release notes', () {
     expect(UpdateService.parseBuild('نسخة جديدة\n\nbuild=42'), 42);
     expect(UpdateService.parseBuild('no number'), isNull);
+    expect(UpdateService.currentBuildFrom('2018'), 18);
+    expect(UpdateService.currentBuildFrom('17'), 17);
   });
 
   test('new categories exist', () {
     expect(PlaceCategory.fromId('crafts'), PlaceCategory.crafts);
     expect(PlaceCategory.fromId('public_figure'), PlaceCategory.publicFigure);
+    expect(PlaceCategory.fromId('company'), PlaceCategory.company);
   });
 
   test('place location label and round-trip of governorate/city', () {

@@ -23,6 +23,10 @@ class AppConfig {
   static const String latestApkUrl =
       'https://github.com/emadbessa1-glitch/qarib/releases/download/latest/qarib.apk';
 
+  /// نسخة الموبايلات القديمة (32-bit).
+  static const String latestApkUrlArm32 =
+      'https://github.com/emadbessa1-glitch/qarib/releases/download/latest/qarib-arm32.apk';
+
   /// إيميل التواصل مع الإدارة (بيظهر في سياسة الخصوصية والشروط). فاضي = مش بيظهر.
   static const String supportEmail = 'emadbessa610@yahoo.com';
 
