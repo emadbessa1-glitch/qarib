@@ -1,0 +1,69 @@
+rules_version = '2';
+
+// قواعد الأمان لقاعدة بيانات "قريب".
+// انشرها من Firebase Console ← Firestore ← Rules، أو: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // الأدمن = أي إيميل ليه document في collection اسمه admins (اسم الـ document هو الإيميل بحروف صغيرة).
+    // تضيف أدمن أو تشيله من Firebase Console من غير ما تعدّل الكود.
+    function isAdmin() {
+      return signedIn()
+          && request.auth.token.email is string
+          && exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()));
+    }
+
+    // كل أدمن يقدر يقرا الـ document بتاعه بس (عشان التطبيق يعرف إنه أدمن).
+    // الإضافة والحذف من Firebase Console بس.
+    match /admins/{adminEmail} {
+      allow read: if signedIn()
+                  && request.auth.token.email is string
+                  && request.auth.token.email.lower() == adminEmail;
+      allow write: if false;
+    }
+
+    match /places/{placeId} {
+      // الناس بتشوف المتوافق عليه بس. الأدمن بيشوف كله. صاحب المكان بيشوف مكانه.
+      allow read: if resource.data.status == 'approved'
+                  || isAdmin()
+                  || (signedIn() && resource.data.ownerId == request.auth.uid);
+
+      // أي حد مسجل دخول (حتى Anonymous) يقدر يضيف مكان، بس بيتسجل pending ومن غير تقييمات.
+      allow create: if signedIn()
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.ratingSum == 0
+                    && request.resource.data.ratingCount == 0
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() < 100;
+
+      // الأدمن يعدّل أي حاجة. غيره يقدر يزوّد عداد التقييم بس (تقييم واحد في المرة، من 1 لـ 5).
+      allow update: if isAdmin()
+                    || (signedIn()
+                        && resource.data.status == 'approved'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['ratingSum', 'ratingCount'])
+                        && request.resource.data.ratingCount == resource.data.ratingCount + 1
+                        && request.resource.data.ratingSum >= resource.data.ratingSum + 1
+                        && request.resource.data.ratingSum <= resource.data.ratingSum + 5);
+
+      allow delete: if isAdmin();
+
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if signedIn()
+                      && request.resource.data.authorId == request.auth.uid
+                      && request.resource.data.rating is int
+                      && request.resource.data.rating >= 1
+                      && request.resource.data.rating <= 5
+                      && request.resource.data.comment.size() <= 300;
+        allow update, delete: if isAdmin();
+      }
+    }
+  }
+}

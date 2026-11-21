@@ -1,1 +1,74 @@
-# qarib
+# قريب: دليل الخدمات القريبة منك
+
+تطبيق Flutter لأندرويد بيعرض الصيدليات والسوبر ماركت والدكاترة والمدارس والسناتر حسب المنطقة وحسب الأقرب ليك.
+
+## مميزات النسخة الأولى
+- **الخريطة وأقرب مكان:** كل الأماكن بتظهر كعلامات على الخريطة، وفيه زرار "أقرب مكان ليا" لكل نوع.
+- **بحث وفلترة:** بالاسم أو العنوان، وبنوع الخدمة، وبالمنطقة. والنتايج مترتبة من الأقرب للأبعد.
+- **زراير تواصل:** اتصال، وواتساب برسالة جاهزة، واتجاهات على خرايط جوجل.
+- **تقييمات:** نجوم من 1 لـ 5 وتعليق، والمتوسط بيتحسب تلقائي.
+- **أصحاب الأماكن** بيسجلوا أماكنهم من زرار "أضف مكانك"، والمكان بيظهر بعد موافقة **الأدمن** من لوحة الأدمن.
+- الواجهة كلها عربي، ومن اليمين للشمال.
+
+## تنزيل التطبيق
+كل تعديل بيترفع على main بيتبني منه APK تلقائي (GitHub Actions)، وبيتحط في صفحة **Releases** باسم `latest`. نزّل `qarib.apk` من الموبايل وسطّبه.
+
+## التشغيل على الكمبيوتر (للتطوير)
+
+1. نزّل **Flutter** و **Android Studio** (https://docs.flutter.dev/get-started/install/windows/mobile).
+2. افتح Terminal في فولدر المشروع وشغّل:
+   ```
+   flutter create . --platforms android --org com.qarib
+   dart run tool/setup_android.dart
+   flutter pub get
+   flutter test
+   flutter run
+   ```
+3. التطبيق هيفتح على قاعدة البيانات الحقيقية، وهتكون فاضية في الأول. ضيف أول مكان من "أضف مكانك"، وبعدين وافق عليه من لوحة الأدمن.
+
+> لو `flutter pub get` اشتكى من أرقام إصدارات المكتبات، شغّل: `flutter pub upgrade --major-versions`
+
+## Firebase (متظبط)
+- المشروع: **qarib-78026**، وقاعدة البيانات في فرانكفورت (europe-west3).
+- تسجيل الدخول: Anonymous و Email/Password شغالين.
+- قواعد الأمان (`firestore.rules`) منشورة.
+- تطبيق أندرويد `com.qarib.qarib` متسجل، وإعداداته في `lib/firebase_options.dart`.
+- `useFirebase = true` في `lib/config.dart`. لو عايز ترجع للبيانات التجريبية خليه `false` (والأدمن في الوضع ده `admin@qarib.app` بأي باسورد).
+
+### الأدمن
+الأدمن متسجلين في Firestore في collection اسمه **admins**، وكل document اسمه إيميل أدمن بحروف صغيرة. 
+
+- **تضيف أدمن:** من Firestore ← admins ← Add document، واكتب إيميله في Document ID، وضيف أي حقل (مثلاً `role` = `admin`). وبعدين اعمله حساب من Authentication ← Users ← Add user بنفس الإيميل وباسورد.
+- **تشيل أدمن:** امسح الـ document بتاعه من admins.
+- مش محتاج تعدّل الكود ولا تحدّث التطبيق في الحالتين.
+
+## شكل البيانات على Firestore
+```
+places/{id}
+  name, category (pharmacy|supermarket|doctor|school|tutoring),
+  area, address, phone, whatsapp, lat, lng, workingHours, description,
+  status (pending|approved|rejected), ratingSum, ratingCount, ownerId, createdAt
+places/{id}/reviews/{id}
+  authorName, rating (1-5), comment, authorId, createdAt
+```
+
+## هيكل الكود
+```
+lib/
+  config.dart                 الإعدادات (وضع التجربة/Firebase، إيميلات الأدمن)
+  main.dart
+  models/                     Place, Review, PlaceCategory
+  data/                       واجهة البيانات + تنفيذ تجريبي + تنفيذ Firestore
+  services/                   الموقع، تسجيل الدخول
+  utils/                      المسافات، أرقام التليفون والواتساب
+  screens/                    الرئيسية، القائمة، الخريطة، التفاصيل، أضف مكانك، الأدمن
+  widgets/
+test/utils_test.dart
+firestore.rules
+tool/setup_android.dart
+```
+
+## ملاحظات قبل النشر
+- **الخرايط:** التطبيق بيستخدم OpenStreetMap (من غير مفتاح API). السيرفر المجاني بتاعهم معمول للاستخدام الخفيف بس، فلما عدد المستخدمين يزيد غيّر `urlTemplate` في `lib/widgets/osm_map.dart` لمزوّد خرايط زي MapTiler أو Stadia بمفتاح خاص بيك.
+- **الأمان:** صلاحيات الأدمن متحددة بالإيميل في `firestore.rules`. ماتفعّلش تسجيل حسابات جديدة بالإيميل جوه التطبيق.
+- **أفكار للنسخة الجاية:** إشعارات، صور للأماكن، صاحب المكان يعدّل بياناته، الإبلاغ عن مكان قافل أو بيانات غلط.

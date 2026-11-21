@@ -1,0 +1,226 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../config.dart';
+import '../data/places_repository.dart';
+import '../models/place.dart';
+import '../services/auth_service.dart';
+import '../utils/contact.dart';
+import 'place_details_screen.dart';
+
+/// لوحة الأدمن: مراجعة الأماكن الجديدة والموافقة أو الرفض.
+class AdminScreen extends StatelessWidget {
+  const AdminScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('لوحة الأدمن'),
+        actions: [
+          if (auth.isAdmin)
+            IconButton(
+              tooltip: 'خروج',
+              icon: const Icon(Icons.logout),
+              onPressed: auth.signOut,
+            ),
+        ],
+      ),
+      body: auth.isAdmin ? const _PendingList() : const _AdminLogin(),
+    );
+  }
+}
+
+class _AdminLogin extends StatefulWidget {
+  const _AdminLogin();
+
+  @override
+  State<_AdminLogin> createState() => _AdminLoginState();
+}
+
+class _AdminLoginState extends State<_AdminLogin> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await context.read<AuthService>().signInAdmin(
+            _email.text,
+            _password.text,
+          );
+    } catch (e) {
+      if (mounted) setState(() => _error = 'الدخول فشل: اتأكد من الإيميل والباسورد');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const Icon(Icons.admin_panel_settings, size: 64),
+        const SizedBox(height: 16),
+        if (!AppConfig.useFirebase)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                'وضع التجربة: ادخل بإيميل الأدمن المكتوب في config.dart وأي باسورد.',
+              ),
+            ),
+          ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          textDirection: TextDirection.ltr,
+          decoration: const InputDecoration(labelText: 'الإيميل'),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _password,
+          obscureText: true,
+          textDirection: TextDirection.ltr,
+          decoration: const InputDecoration(labelText: 'الباسورد'),
+          onSubmitted: (_) => _login(),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 8),
+          Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        ],
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: _busy ? null : _login,
+          child: const Text('دخول'),
+        ),
+      ],
+    );
+  }
+}
+
+class _PendingList extends StatefulWidget {
+  const _PendingList();
+
+  @override
+  State<_PendingList> createState() => _PendingListState();
+}
+
+class _PendingListState extends State<_PendingList> {
+  late final Stream<List<Place>> _pending;
+
+  @override
+  void initState() {
+    super.initState();
+    _pending = context.read<PlacesRepository>().watchPending();
+  }
+
+  Future<void> _decide(Place place, PlaceStatus status) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<PlacesRepository>().setStatus(place.id, status);
+      messenger.showSnackBar(SnackBar(
+        content: Text('${place.name}: ${status.label}'),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('العملية فشلت، حاول تاني')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Place>>(
+      stream: _pending,
+      builder: (context, snap) {
+        if (snap.hasError) {
+          return const Center(child: Text('حصلت مشكلة في التحميل'));
+        }
+        if (!snap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final places = snap.data!;
+        if (places.isEmpty) {
+          return const Center(child: Text('مفيش أماكن مستنية مراجعة 👌'));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(8),
+          itemCount: places.length,
+          itemBuilder: (context, i) {
+            final p = places[i];
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(p.category.icon, color: p.category.color),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(p.name,
+                              style: Theme.of(context).textTheme.titleMedium),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text('${p.category.label} • ${p.area}'),
+                    Text(p.address),
+                    Text(p.phone, textDirection: TextDirection.ltr),
+                    if (p.description.isNotEmpty) Text(p.description),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: () => _decide(p, PlaceStatus.approved),
+                          icon: const Icon(Icons.check),
+                          label: const Text('موافقة'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => _decide(p, PlaceStatus.rejected),
+                          icon: const Icon(Icons.close),
+                          label: const Text('رفض'),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => callPhone(p.phone),
+                          icon: const Icon(Icons.call),
+                          label: const Text('اتصل للتأكد'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => PlaceDetailsScreen(place: p),
+                            ),
+                          ),
+                          child: const Text('معاينة'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
