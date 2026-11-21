@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../config.dart';
 import '../data/places_repository.dart';
+import '../data/users_repository.dart';
+import '../models/app_user.dart';
 import '../models/place.dart';
 import '../services/auth_service.dart';
 import '../utils/contact.dart';
@@ -27,7 +29,7 @@ class AdminScreen extends StatelessWidget {
             ),
         ],
       ),
-      body: auth.isAdmin ? const _PendingList() : const _AdminLogin(),
+      body: auth.isAdmin ? const _AdminTabs() : const _AdminLogin(),
     );
   }
 }
@@ -219,6 +221,127 @@ class _PendingListState extends State<_PendingList> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+class _AdminTabs extends StatelessWidget {
+  const _AdminTabs();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.fact_check_outlined), text: 'أماكن للمراجعة'),
+              Tab(icon: Icon(Icons.people_outline), text: 'المستخدمين'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [_PendingList(), _UsersList()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// بيانات المستخدمين المسجلين. بتظهر للأدمن بس.
+class _UsersList extends StatefulWidget {
+  const _UsersList();
+
+  @override
+  State<_UsersList> createState() => _UsersListState();
+}
+
+class _UsersListState extends State<_UsersList> {
+  late final Stream<List<AppUser>> _users;
+  final _search = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _users = context.read<UsersRepository>().watchAll();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  String _date(DateTime d) =>
+      '${d.day}/${d.month}/${d.year}';
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<AppUser>>(
+      stream: _users,
+      builder: (context, snap) {
+        if (snap.hasError) {
+          return const Center(child: Text('حصلت مشكلة في التحميل'));
+        }
+        if (!snap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final q = _search.text.trim().toLowerCase();
+        final all = snap.data!;
+        final users = q.isEmpty
+            ? all
+            : all
+                .where((u) =>
+                    u.name.toLowerCase().contains(q) ||
+                    u.phone.contains(q) ||
+                    u.email.contains(q))
+                .toList();
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+              child: TextField(
+                controller: _search,
+                decoration: InputDecoration(
+                  hintText: 'بحث بالاسم أو الرقم أو الإيميل',
+                  prefixIcon: const Icon(Icons.search),
+                  isDense: true,
+                  helperText: 'العدد: ${all.length}',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            Expanded(
+              child: users.isEmpty
+                  ? const Center(child: Text('مفيش مستخدمين'))
+                  : ListView.separated(
+                      itemCount: users.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, i) {
+                        final u = users[i];
+                        return ListTile(
+                          leading: const CircleAvatar(child: Icon(Icons.person)),
+                          title: Text(u.name),
+                          subtitle: Text(
+                            '${u.phone}\n${u.email}\nسجّل: ${_date(u.createdAt)}',
+                          ),
+                          isThreeLine: true,
+                          trailing: IconButton(
+                            tooltip: 'اتصال',
+                            icon: const Icon(Icons.call),
+                            onPressed: () => callPhone(u.phone),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
     );

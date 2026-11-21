@@ -3,6 +3,7 @@
 تطبيق Flutter لأندرويد بيعرض الصيدليات والسوبر ماركت والدكاترة والمدارس والسناتر حسب المنطقة وحسب الأقرب ليك.
 
 ## مميزات النسخة الأولى
+- **تسجيل المستخدمين:** أول مرة حد يفتح التطبيق بيكتب اسمه ورقم موبايله وإيميله. البيانات بتتحفظ في Firestore (`users`)، ومحدش يشوفها غير الأدمن من تبويب "المستخدمين" في لوحة الأدمن.
 - **الخريطة وأقرب مكان:** كل الأماكن بتظهر كعلامات على الخريطة، وفيه زرار "أقرب مكان ليا" لكل نوع.
 - **بحث وفلترة:** بالاسم أو العنوان، وبنوع الخدمة، وبالمنطقة. والنتايج مترتبة من الأقرب للأبعد.
 - **زراير تواصل:** اتصال، وواتساب برسالة جاهزة، واتجاهات على خرايط جوجل.
@@ -48,6 +49,10 @@ places/{id}
   name, category (pharmacy|supermarket|doctor|school|tutoring),
   area, address, phone, whatsapp, lat, lng, workingHours, description,
   status (pending|approved|rejected), ratingSum, ratingCount, ownerId, createdAt
+users/{uid}
+  name, phone, email, createdAt        ← للأدمن بس
+admins/{email}
+  role
 places/{id}/reviews/{id}
   authorName, rating (1-5), comment, authorId, createdAt
 ```

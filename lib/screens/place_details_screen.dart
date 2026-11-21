@@ -8,6 +8,7 @@ import '../models/place.dart';
 import '../models/review.dart';
 import '../services/auth_service.dart';
 import '../services/location_service.dart';
+import '../services/profile_service.dart';
 import '../utils/contact.dart';
 import '../utils/geo.dart';
 import '../widgets/approved_places_builder.dart';
@@ -35,7 +36,9 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
   Future<void> _addReview() async {
     final result = await showDialog<_ReviewInput>(
       context: context,
-      builder: (_) => const _ReviewDialog(),
+      builder: (_) => _ReviewDialog(
+        initialName: context.read<ProfileService>().name,
+      ),
     );
     if (result == null || !mounted) return;
 
@@ -264,14 +267,16 @@ class _ReviewInput {
 }
 
 class _ReviewDialog extends StatefulWidget {
-  const _ReviewDialog();
+  const _ReviewDialog({this.initialName = ''});
+
+  final String initialName;
 
   @override
   State<_ReviewDialog> createState() => _ReviewDialogState();
 }
 
 class _ReviewDialogState extends State<_ReviewDialog> {
-  final _name = TextEditingController();
+  late final _name = TextEditingController(text: widget.initialName);
   final _comment = TextEditingController();
   int _rating = 0;
 
