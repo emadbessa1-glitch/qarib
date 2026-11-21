@@ -30,7 +30,11 @@ void main() {
 
     expect(find.text('أهلاً بيك في قريب'), findsOneWidget);
     expect(find.text('صاحب عمل'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('ابدأ'), 200);
+    await tester.scrollUntilVisible(
+      find.text('ابدأ'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('ابدأ'), findsOneWidget);
     expect(find.textContaining('مشفّرة'), findsOneWidget);
   });
