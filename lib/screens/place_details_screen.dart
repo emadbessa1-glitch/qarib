@@ -17,6 +17,7 @@ import '../widgets/approved_places_builder.dart';
 import '../widgets/osm_map.dart';
 import '../widgets/rating_stars.dart';
 import '../widgets/report_dialog.dart';
+import '../widgets/schedule_editor.dart';
 import 'add_place_screen.dart';
 import 'chat_screen.dart';
 
@@ -242,7 +243,9 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
           leading: const Icon(Icons.phone_outlined),
           title: Text(place.phone, textDirection: TextDirection.ltr),
         ),
-        if (place.workingHours.isNotEmpty)
+        if (place.hasSchedule)
+          ScheduleView(schedule: place.schedule)
+        else if (place.workingHours.isNotEmpty)
           ListTile(
             leading: const Icon(Icons.schedule),
             title: Text(place.workingHours),

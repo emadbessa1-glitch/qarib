@@ -9,9 +9,11 @@ import '../data/egypt_locations.dart';
 import '../data/places_repository.dart';
 import '../models/category.dart';
 import '../models/place.dart';
+import '../models/working_hours.dart';
 import '../services/auth_service.dart';
 import '../services/location_service.dart';
 import '../utils/contact.dart';
+import '../widgets/schedule_editor.dart';
 import 'location_picker_screen.dart';
 
 /// صاحب المكان بيسجل مكانه. بيتبعت للأدمن للمراجعة قبل ما يظهر.
@@ -33,8 +35,13 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
   final _address = TextEditingController();
   final _phone = TextEditingController();
   final _whatsapp = TextEditingController();
-  final _hours = TextEditingController();
   final _description = TextEditingController();
+
+  WeeklySchedule _schedule = const WeeklySchedule();
+  String? _scheduleError;
+
+  /// مواعيد مكتوبة نص في الأماكن القديمة (قبل جدول المواعيد).
+  String _legacyHours = '';
 
   PlaceCategory _category = PlaceCategory.pharmacy;
   String? _governorate;
@@ -61,7 +68,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
       _whatsappEnabled = e.hasWhatsapp;
       _whatsappSameAsPhone = !e.hasWhatsapp || e.whatsapp == e.phone;
       _whatsapp.text = e.whatsapp;
-      _hours.text = e.workingHours;
+      _schedule = e.schedule;
+      if (!e.hasSchedule) _legacyHours = e.workingHours;
       _description.text = e.description;
       _location = e.location;
     }
@@ -88,7 +96,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
     _areasSub?.cancel();
     _areaFocus.dispose();
     for (final c in [
-      _name, _area, _address, _phone, _whatsapp, _hours, _description,
+      _name, _area, _address, _phone, _whatsapp, _description,
     ]) {
       c.dispose();
     }
@@ -129,7 +137,10 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_form.currentState!.validate()) return;
+    final formOk = _form.currentState!.validate();
+    setState(() => _scheduleError =
+        _schedule.isEmpty ? 'اختار يوم واحد على الأقل وحدد ساعاته' : null);
+    if (!formOk || _scheduleError != null) return;
     if (_location == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('حدد مكان المحل على الخريطة'),
@@ -161,7 +172,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
             : (_whatsappSameAsPhone ? phone : digitsOnly(_whatsapp.text)),
         lat: _location!.latitude,
         lng: _location!.longitude,
-        workingHours: _hours.text.trim(),
+        workingHours: _schedule.summary(),
+        schedule: _schedule,
         description: _description.text.trim(),
         ownerId: editing != null ? editing.ownerId : auth.userId,
         createdAt: editing?.createdAt ?? DateTime.now(),
@@ -340,12 +352,18 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
               ),
               gap,
             ],
-            TextFormField(
-              controller: _hours,
-              decoration: const InputDecoration(
-                labelText: 'مواعيد العمل (اختياري)',
-                hintText: 'مثلاً: من 9 ص لـ 11 م',
-              ),
+            if (_legacyHours.isNotEmpty) ...[
+              Text('المواعيد القديمة: $_legacyHours',
+                  style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 6),
+            ],
+            ScheduleEditor(
+              value: _schedule,
+              errorText: _scheduleError,
+              onChanged: (s) => setState(() {
+                _schedule = s;
+                if (!s.isEmpty) _scheduleError = null;
+              }),
             ),
             gap,
             TextFormField(

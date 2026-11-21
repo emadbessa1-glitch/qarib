@@ -60,6 +60,22 @@ class PlaceCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text('(${place.ratingCount})',
                             style: theme.textTheme.bodySmall),
+                        if (place.hasSchedule) ...[
+                          const SizedBox(width: 8),
+                          Builder(builder: (_) {
+                            final open =
+                                place.schedule.isOpenAt(DateTime.now());
+                            return Text(
+                              open ? 'مفتوح' : 'مقفول',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: open
+                                    ? Colors.green.shade700
+                                    : theme.colorScheme.error,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          }),
+                        ],
                       ],
                     ),
                   ],

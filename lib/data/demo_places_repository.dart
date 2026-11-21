@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../models/category.dart';
 import '../models/place.dart';
+import '../models/working_hours.dart';
 import '../models/review.dart';
 import 'places_repository.dart';
 
@@ -123,7 +124,12 @@ final List<Place> demoPlaces = <Place>[
     whatsapp: '01000000001',
     lat: 30.0566,
     lng: 31.3300,
-    workingHours: '24 ساعة',
+    workingHours: 'يومياً: 24 ساعة',
+    schedule: WeeklySchedule({
+      1: [TimeRange.fullDay], 2: [TimeRange.fullDay], 3: [TimeRange.fullDay],
+      4: [TimeRange.fullDay], 5: [TimeRange.fullDay], 6: [TimeRange.fullDay],
+      7: [TimeRange.fullDay],
+    }),
     description: 'توصيل للمنازل',
     status: PlaceStatus.approved,
     ratingSum: 18,
@@ -192,6 +198,11 @@ final List<Place> demoPlaces = <Place>[
     lat: 30.0500,
     lng: 31.3500,
     workingHours: 'من 5 لـ 10 مساءً',
+    schedule: WeeklySchedule({
+      6: [TimeRange(17 * 60, 22 * 60)], 7: [TimeRange(17 * 60, 22 * 60)],
+      1: [TimeRange(17 * 60, 22 * 60)], 2: [TimeRange(17 * 60, 22 * 60)],
+      3: [TimeRange(17 * 60, 22 * 60)], 4: [TimeRange(10 * 60, 13 * 60), TimeRange(17 * 60, 22 * 60)],
+    }),
     description: 'بالحجز المسبق',
     status: PlaceStatus.approved,
     ratingSum: 14,

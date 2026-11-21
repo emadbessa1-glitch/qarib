@@ -1,6 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
 import 'category.dart';
+import 'working_hours.dart';
 
 /// حالة المكان: صاحب المكان بيضيفه فيبقى "قيد المراجعة" لحد ما الأدمن يوافق.
 enum PlaceStatus {
@@ -35,6 +36,7 @@ class Place {
     required this.lng,
     this.description = '',
     this.workingHours = '',
+    this.schedule = const WeeklySchedule(),
     this.status = PlaceStatus.pending,
     this.ratingSum = 0,
     this.ratingCount = 0,
@@ -66,7 +68,13 @@ class Place {
   final double lat;
   final double lng;
   final String description;
+  /// نص المواعيد (للأماكن القديمة، وملخص للجديدة).
   final String workingHours;
+
+  /// المواعيد بالظبط لكل يوم.
+  final WeeklySchedule schedule;
+
+  bool get hasSchedule => !schedule.isEmpty;
   final PlaceStatus status;
   final int ratingSum;
   final int ratingCount;
@@ -101,6 +109,7 @@ class Place {
       lng: lng,
       description: description,
       workingHours: workingHours,
+      schedule: schedule,
       status: status ?? this.status,
       ratingSum: ratingSum ?? this.ratingSum,
       ratingCount: ratingCount ?? this.ratingCount,
@@ -123,6 +132,7 @@ class Place {
       'lng': lng,
       'description': description,
       'workingHours': workingHours,
+      'schedule': schedule.toMap(),
       'status': status.id,
       'ratingSum': ratingSum,
       'ratingCount': ratingCount,
@@ -147,6 +157,7 @@ class Place {
       lng: (map['lng'] as num?)?.toDouble() ?? 0,
       description: (map['description'] ?? '') as String,
       workingHours: (map['workingHours'] ?? '') as String,
+      schedule: WeeklySchedule.fromMap(map['schedule']),
       status: PlaceStatus.fromId(map['status'] as String?),
       ratingSum: (map['ratingSum'] as num?)?.toInt() ?? 0,
       ratingCount: (map['ratingCount'] as num?)?.toInt() ?? 0,
