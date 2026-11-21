@@ -48,6 +48,7 @@ void main() {
   manifest.writeAsStringSync(xml);
   stdout.writeln('✓ AndroidManifest.xml');
 
+  final hasKey = File('android/key.properties').existsSync();
   for (final path in ['android/app/build.gradle.kts', 'android/app/build.gradle']) {
     final f = File(path);
     if (!f.existsSync()) continue;
@@ -55,6 +56,38 @@ void main() {
     gradle = gradle
         .replaceAll('minSdk = flutter.minSdkVersion', 'minSdk = 23')
         .replaceAll('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 23');
+
+    if (hasKey && path.endsWith('.kts') && !gradle.contains('keystoreProperties')) {
+      const debugLine = 'signingConfig = signingConfigs.getByName("debug")';
+      if (!gradle.contains(debugLine) || !gradle.contains('buildTypes {')) {
+        stderr.writeln('مش لاقي إعدادات التوقيع المتوقعة في $path');
+        exit(1);
+      }
+      const props = '''
+val keystoreProperties = java.util.Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+}
+
+''';
+      const signing = '''signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
+        }
+    }
+
+    buildTypes {''';
+      gradle = gradle
+          .replaceFirst('android {', '${props}android {')
+          .replaceFirst('buildTypes {', signing)
+          .replaceFirst(debugLine, 'signingConfig = signingConfigs.getByName("release")');
+      stdout.writeln('✓ $path (release signing)');
+    }
+
     f.writeAsStringSync(gradle);
     stdout.writeln('✓ $path (minSdk 23)');
   }

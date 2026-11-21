@@ -25,6 +25,22 @@ jobs:
           channel: stable
           cache: true
 
+      # مفتاح التوقيع الثابت (من Settings > Secrets). من غيره الموبايل يرفض التحديث فوق النسخة القديمة.
+      - name: Prepare signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            mkdir -p android/app
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/qarib-upload.jks
+            printf 'storeFile=qarib-upload.jks\nstorePassword=%s\nkeyAlias=qarib\nkeyPassword=%s\n' \
+              "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > android/key.properties
+            echo "Signing with the release key"
+          else
+            echo "::warning::No signing key secrets; building with a temporary debug key"
+          fi
+
       - name: Generate Android project files
         run: |
           flutter create . --platforms android --org com.qarib --project-name qarib
