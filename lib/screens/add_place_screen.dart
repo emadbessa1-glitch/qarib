@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../config.dart';
+import '../data/egypt_locations.dart';
 import '../data/places_repository.dart';
 import '../models/category.dart';
 import '../models/place.dart';
@@ -23,6 +26,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _area = TextEditingController();
+  final _areaFocus = FocusNode();
   final _address = TextEditingController();
   final _phone = TextEditingController();
   final _whatsapp = TextEditingController();
@@ -30,6 +34,29 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
   final _description = TextEditingController();
 
   PlaceCategory _category = PlaceCategory.pharmacy;
+  String? _governorate;
+  String? _city;
+
+  /// المناطق اللي متسجلة قبل كده في كل مدينة، عشان صاحب العمل يختار منها.
+  final Map<String, Set<String>> _knownAreas = <String, Set<String>>{};
+  StreamSubscription<List<Place>>? _areasSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _areasSub = context.read<PlacesRepository>().watchApproved().listen((all) {
+      final map = <String, Set<String>>{};
+      for (final p in all) {
+        if (p.city.isEmpty || p.area.isEmpty) continue;
+        (map[p.city] ??= <String>{}).add(p.area);
+      }
+      if (mounted) {
+        setState(() => _knownAreas
+          ..clear()
+          ..addAll(map));
+      }
+    }, onError: (_) {});
+  }
   bool _whatsappEnabled = true;
   bool _whatsappSameAsPhone = true;
   LatLng? _location;
@@ -37,6 +64,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
 
   @override
   void dispose() {
+    _areasSub?.cancel();
+    _areaFocus.dispose();
     for (final c in [
       _name, _area, _address, _phone, _whatsapp, _hours, _description,
     ]) {
@@ -101,6 +130,8 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
         name: _name.text.trim(),
         category: _category,
         area: _area.text.trim(),
+        governorate: _governorate!,
+        city: _city!,
         address: _address.text.trim(),
         phone: phone,
         whatsapp: !_whatsappEnabled
@@ -157,13 +188,81 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
               validator: _required,
             ),
             gap,
-            TextFormField(
-              controller: _area,
+            DropdownButtonFormField<String>(
+              value: _governorate,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'المحافظة'),
+              items: [
+                for (final g in governorates)
+                  DropdownMenuItem(value: g, child: Text(g)),
+              ],
+              onChanged: (g) => setState(() {
+                _governorate = g;
+                _city = null;
+              }),
+              validator: (v) => v == null ? 'اختار المحافظة' : null,
+            ),
+            gap,
+            DropdownButtonFormField<String>(
+              key: ValueKey(_governorate),
+              value: _city,
+              isExpanded: true,
               decoration: const InputDecoration(
-                labelText: 'المنطقة',
-                hintText: 'مثلاً: مدينة نصر',
+                labelText: 'المدينة / المركز / الحي',
               ),
-              validator: _required,
+              items: [
+                for (final c in citiesOf(_governorate ?? ''))
+                  DropdownMenuItem(value: c, child: Text(c)),
+              ],
+              onChanged: _governorate == null
+                  ? null
+                  : (c) => setState(() => _city = c),
+              validator: (v) => v == null ? 'اختار المدينة' : null,
+            ),
+            gap,
+            RawAutocomplete<String>(
+              textEditingController: _area,
+              focusNode: _areaFocus,
+              optionsBuilder: (value) {
+                final options = _knownAreas[_city] ?? const <String>{};
+                final q = value.text.trim();
+                return options.where((a) => q.isEmpty || a.contains(q));
+              },
+              fieldViewBuilder: (context, controller, focus, onSubmit) {
+                return TextFormField(
+                  controller: controller,
+                  focusNode: focus,
+                  decoration: const InputDecoration(
+                    labelText: 'المنطقة',
+                    hintText: 'اختار من القايمة أو اكتب اسم منطقتك',
+                  ),
+                  validator: _required,
+                );
+              },
+              optionsViewBuilder: (context, onSelected, options) {
+                return Align(
+                  alignment: AlignmentDirectional.topStart,
+                  child: Material(
+                    elevation: 4,
+                    child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(maxHeight: 220, maxWidth: 320),
+                      child: ListView(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        children: [
+                          for (final o in options)
+                            ListTile(
+                              dense: true,
+                              title: Text(o),
+                              onTap: () => onSelected(o),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
             gap,
             TextFormField(

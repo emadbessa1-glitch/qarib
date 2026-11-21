@@ -29,7 +29,8 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
   late PlaceCategory? _category = widget.initialCategory;
   late final TextEditingController _search =
       TextEditingController(text: widget.initialQuery);
-  String? _area;
+  String? _governorate;
+  String? _city;
 
   @override
   void dispose() {
@@ -41,10 +42,12 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
     final q = _search.text.trim().toLowerCase();
     return all.where((p) {
       if (_category != null && p.category != _category) return false;
-      if (_area != null && p.area != _area) return false;
+      if (_governorate != null && p.governorate != _governorate) return false;
+      if (_city != null && p.city != _city) return false;
       if (q.isEmpty) return true;
       return p.name.toLowerCase().contains(q) ||
           p.area.toLowerCase().contains(q) ||
+          p.city.toLowerCase().contains(q) ||
           p.address.toLowerCase().contains(q) ||
           p.description.toLowerCase().contains(q) ||
           p.category.label.contains(q);
@@ -72,7 +75,18 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
       ),
       body: ApprovedPlacesBuilder(
         builder: (context, all) {
-          final areas = all.map((p) => p.area).where((a) => a.isNotEmpty).toSet().toList()
+          final govs = all
+              .map((p) => p.governorate)
+              .where((g) => g.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+          final cities = all
+              .where((p) => _governorate == null || p.governorate == _governorate)
+              .map((p) => p.city)
+              .where((c) => c.isNotEmpty)
+              .toSet()
+              .toList()
             ..sort();
           final places = sortPlaces(_filter(all), userLocation);
 
@@ -80,40 +94,62 @@ class _PlacesListScreenState extends State<PlacesListScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                child: TextField(
+                  controller: _search,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'بحث بالاسم أو المنطقة أو العنوان',
+                    prefixIcon: const Icon(Icons.search),
+                    isDense: true,
+                    suffixIcon: _search.text.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () => setState(() => _search.clear()),
+                          ),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: _search,
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          hintText: 'بحث بالاسم أو العنوان',
-                          prefixIcon: const Icon(Icons.search),
-                          isDense: true,
-                          suffixIcon: _search.text.isEmpty
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () =>
-                                      setState(() => _search.clear()),
-                                ),
-                        ),
-                        onChanged: (_) => setState(() {}),
+                      child: DropdownButton<String?>(
+                        isExpanded: true,
+                        value: govs.contains(_governorate) ? _governorate : null,
+                        hint: const Text('كل المحافظات'),
+                        onChanged: (v) => setState(() {
+                          _governorate = v;
+                          _city = null;
+                        }),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('كل المحافظات'),
+                          ),
+                          for (final g in govs)
+                            DropdownMenuItem<String?>(value: g, child: Text(g)),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    DropdownButton<String?>(
-                      value: areas.contains(_area) ? _area : null,
-                      hint: const Text('كل المناطق'),
-                      onChanged: (v) => setState(() => _area = v),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('كل المناطق'),
-                        ),
-                        for (final a in areas)
-                          DropdownMenuItem<String?>(value: a, child: Text(a)),
-                      ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButton<String?>(
+                        isExpanded: true,
+                        value: cities.contains(_city) ? _city : null,
+                        hint: const Text('كل المدن'),
+                        onChanged: (v) => setState(() => _city = v),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('كل المدن'),
+                          ),
+                          for (final c in cities)
+                            DropdownMenuItem<String?>(value: c, child: Text(c)),
+                        ],
+                      ),
                     ),
                   ],
                 ),

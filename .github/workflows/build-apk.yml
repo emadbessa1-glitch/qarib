@@ -39,7 +39,7 @@ jobs:
         run: flutter test
 
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --build-number=${{ github.run_number }} --build-name=1.0.${{ github.run_number }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -54,4 +54,6 @@ jobs:
           gh release delete latest --yes --cleanup-tag || true
           gh release create latest qarib.apk \
             --title "قريب - آخر نسخة" \
-            --notes "نسخة اتبنت تلقائي من آخر تعديل (${GITHUB_SHA::7}). نزّل qarib.apk على الموبايل وسطّبه."
+            --notes "نسخة رقم ${{ github.run_number }} اتبنت تلقائي من آخر تعديل (${GITHUB_SHA::7}). نزّل qarib.apk على الموبايل وسطّبه.
+
+          build=${{ github.run_number }}"

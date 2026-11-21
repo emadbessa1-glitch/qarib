@@ -14,6 +14,7 @@ import 'screens/start_gate.dart';
 import 'services/auth_service.dart';
 import 'services/location_service.dart';
 import 'services/profile_service.dart';
+import 'services/update_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,6 +81,9 @@ class QaribApp extends StatelessWidget {
         Provider<ChatRepository>.value(value: chats),
         ChangeNotifierProvider<AuthService>.value(value: auth),
         ChangeNotifierProvider<ProfileService>.value(value: profile),
+        ChangeNotifierProvider<UpdateService>(
+          create: (_) => UpdateService()..check(),
+        ),
         ChangeNotifierProvider<LocationService>(
           create: (_) => LocationService()..refresh(),
         ),

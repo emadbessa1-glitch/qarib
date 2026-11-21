@@ -183,7 +183,7 @@ class _PendingListState extends State<_PendingList> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text('${p.category.label} • ${p.area}'),
+                    Text('${p.category.label} • ${p.locationLabel} • ${p.governorate}'),
                     Text(p.address),
                     Text(p.phone, textDirection: TextDirection.ltr),
                     if (p.description.isNotEmpty) Text(p.description),

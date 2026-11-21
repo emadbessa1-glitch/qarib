@@ -164,7 +164,7 @@ class _PlaceSheet extends StatelessWidget {
             const SizedBox(height: 4),
             Text([
               place.category.label,
-              place.area,
+              place.locationLabel,
               if (user != null)
                 formatDistance(metersBetween(user!, place.location)),
             ].join(' • ')),

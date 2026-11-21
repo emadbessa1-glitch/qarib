@@ -137,7 +137,7 @@ class _PlaceDetailsScreenState extends State<PlaceDetailsScreen> {
           ),
           title: Text(place.name, style: theme.textTheme.titleLarge),
           subtitle: Text(
-            [place.category.label, place.area, if (distance != null) distance]
+            [place.category.label, place.locationLabel, if (distance != null) distance]
                 .join(' • '),
           ),
         ),

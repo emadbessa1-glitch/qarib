@@ -50,7 +50,7 @@ class PlaceCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
                     Text(
-                      [place.area, if (distance != null) distance].join(' • '),
+                      [place.locationLabel, if (distance != null) distance].join(' • '),
                       style: theme.textTheme.bodySmall,
                     ),
                     const SizedBox(height: 4),

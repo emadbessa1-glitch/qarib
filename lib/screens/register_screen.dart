@@ -144,11 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onFieldSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: 16),
-              Text(
-                'بياناتك محفوظة ومحدش بيشوفها غير إدارة التطبيق.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall,
-              ),
+              const PrivacyNote(),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: _saving ? null : _submit,
@@ -170,6 +166,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// تنبيه إن البيانات مشفّرة ومش بتتشارك.
+class PrivacyNote extends StatelessWidget {
+  const PrivacyNote({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lock_outline, color: theme.colorScheme.onSecondaryContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'معلوماتك مشفّرة أثناء الإرسال والتخزين، وغير قابلة للتداول: '
+              'مش بنبيعها ولا بنشاركها مع أي جهة، وبتظهر لإدارة التطبيق بس.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

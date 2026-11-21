@@ -27,6 +27,8 @@ class Place {
     required this.category,
     required this.area,
     required this.address,
+    this.governorate = '',
+    this.city = '',
     required this.phone,
     required this.whatsapp,
     required this.lat,
@@ -44,8 +46,18 @@ class Place {
   final String name;
   final PlaceCategory category;
 
-  /// المنطقة أو الحي (مثلاً: مدينة نصر، المعادي).
+  /// المحافظة والمدينة/المركز (من قايمة egypt_locations).
+  final String governorate;
+  final String city;
+
+  /// المنطقة أو الحي جوه المدينة.
   final String area;
+
+  /// النص اللي بيظهر للمستخدم: "المنطقة، المدينة".
+  String get locationLabel => [area, city]
+      .where((s) => s.trim().isNotEmpty)
+      .toSet()
+      .join('، ');
   final String address;
   final String phone;
 
@@ -81,6 +93,8 @@ class Place {
       category: category,
       area: area,
       address: address,
+      governorate: governorate,
+      city: city,
       phone: phone,
       whatsapp: whatsapp ?? this.whatsapp,
       lat: lat,
@@ -99,6 +113,8 @@ class Place {
     return <String, dynamic>{
       'name': name,
       'category': category.id,
+      'governorate': governorate,
+      'city': city,
       'area': area,
       'address': address,
       'phone': phone,
@@ -122,6 +138,8 @@ class Place {
       name: (map['name'] ?? '') as String,
       category: PlaceCategory.fromId((map['category'] ?? '') as String),
       area: (map['area'] ?? '') as String,
+      governorate: (map['governorate'] ?? '') as String,
+      city: (map['city'] ?? '') as String,
       address: (map['address'] ?? '') as String,
       phone: (map['phone'] ?? '') as String,
       whatsapp: (map['whatsapp'] ?? '') as String,

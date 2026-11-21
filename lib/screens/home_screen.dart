@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../config.dart';
 
 import '../models/category.dart';
 import '../services/location_service.dart';
 import '../services/profile_service.dart';
+import '../services/update_service.dart';
 import '../utils/geo.dart';
 import '../widgets/approved_places_builder.dart';
 import '../widgets/place_card.dart';
@@ -28,7 +32,9 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = context.watch<LocationService>();
-    final isBusiness = context.watch<ProfileService>().isBusiness;
+    final profile = context.watch<ProfileService>();
+    final isBusiness = profile.isBusiness;
+    final hasUpdate = context.watch<UpdateService>().hasUpdate;
 
     return Scaffold(
       appBar: AppBar(
@@ -79,6 +85,15 @@ class HomeScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 96),
           children: [
+            if (hasUpdate) const _UpdateBanner(),
+            if (profile.name.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Text(
+                  'أهلاً ${profile.name} 👋',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: TextField(
@@ -216,6 +231,31 @@ class _AllTile extends StatelessWidget {
             SizedBox(height: 8),
             Text('كل الخدمات'),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UpdateBanner extends StatelessWidget {
+  const _UpdateBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      color: scheme.tertiaryContainer,
+      child: ListTile(
+        leading: const Icon(Icons.system_update),
+        title: const Text('فيه تحديث جديد للتطبيق'),
+        subtitle: const Text('نزّل آخر نسخة عشان تاخد آخر المميزات'),
+        trailing: FilledButton(
+          onPressed: () => launchUrl(
+            Uri.parse(AppConfig.latestApkUrl),
+            mode: LaunchMode.externalApplication,
+          ),
+          child: const Text('تحديث'),
         ),
       ),
     );

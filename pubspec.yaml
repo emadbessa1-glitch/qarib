@@ -26,6 +26,10 @@ dependencies:
   # حفظ إن المستخدم سجّل بياناته
   shared_preferences: ^2.3.3
 
+  # التنبيه بوجود تحديث جديد
+  http: ^1.2.2
+  package_info_plus: ^8.1.1
+
   # Backend (used only when AppConfig.useFirebase = true)
   firebase_core: ^3.8.0
   firebase_auth: ^5.3.3

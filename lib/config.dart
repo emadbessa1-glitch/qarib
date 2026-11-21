@@ -17,6 +17,12 @@ class AppConfig {
   static const double defaultLat = 30.0444;
   static const double defaultLng = 31.2357;
 
+  /// مكان آخر نسخة من التطبيق (GitHub Releases) عشان ننبّه المستخدم بالتحديثات.
+  static const String latestReleaseApi =
+      'https://api.github.com/repos/emadbessa1-glitch/qarib/releases/tags/latest';
+  static const String latestApkUrl =
+      'https://github.com/emadbessa1-glitch/qarib/releases/download/latest/qarib.apk';
+
   /// كود الدولة لأرقام الواتساب.
   static const String countryCode = '20';
 }

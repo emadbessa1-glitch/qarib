@@ -115,7 +115,7 @@ class _MyPlacesScreenState extends State<MyPlacesScreen> {
                                 ),
                               ],
                             ),
-                            Text('${p.area} • ${p.address}'),
+                            Text('${p.locationLabel} • ${p.address}'),
                             const SizedBox(height: 8),
                             ListTile(
                               contentPadding: EdgeInsets.zero,

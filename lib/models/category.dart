@@ -6,7 +6,9 @@ enum PlaceCategory {
   supermarket('supermarket', 'سوبر ماركت', Icons.shopping_cart, Color(0xFFEF6C00)),
   doctor('doctor', 'دكاترة وعيادات', Icons.medical_services, Color(0xFFC62828)),
   school('school', 'مدارس', Icons.school, Color(0xFF1565C0)),
-  tutoring('tutoring', 'سناتر دروس', Icons.menu_book, Color(0xFF6A1B9A));
+  tutoring('tutoring', 'سناتر دروس', Icons.menu_book, Color(0xFF6A1B9A)),
+  crafts('crafts', 'أعمال وحرف', Icons.handyman, Color(0xFF5D4037)),
+  publicFigure('public_figure', 'شخصيات عامة', Icons.account_balance, Color(0xFF00838F));
 
   const PlaceCategory(this.id, this.label, this.icon, this.color);
 
