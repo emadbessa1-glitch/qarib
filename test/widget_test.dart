@@ -29,7 +29,10 @@ void main() {
     await tester.pump();
 
     expect(find.text('أهلاً بيك في قريب'), findsOneWidget);
+    expect(find.text('صاحب عمل'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('ابدأ'), 200);
     expect(find.text('ابدأ'), findsOneWidget);
+    expect(find.textContaining('مشفّرة'), findsOneWidget);
   });
 
   testWidgets('Registered user goes to home', (tester) async {
