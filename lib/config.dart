@@ -24,7 +24,7 @@ class AppConfig {
       'https://github.com/emadbessa1-glitch/qarib/releases/download/latest/qarib.apk';
 
   /// إيميل التواصل مع الإدارة (بيظهر في سياسة الخصوصية والشروط). فاضي = مش بيظهر.
-  static const String supportEmail = '';
+  static const String supportEmail = 'emadbessa610@yahoo.com';
 
   /// كود الدولة لأرقام الواتساب.
   static const String countryCode = '20';
