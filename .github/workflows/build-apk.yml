@@ -36,6 +36,7 @@ jobs:
             PASS=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '[:space:]')
             mkdir -p android/app
             printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > android/app/qarib-upload.jks
+            echo "keystore bytes: $(wc -c < android/app/qarib-upload.jks), sha: $(sha256sum android/app/qarib-upload.jks | cut -c1-16), password length: ${#PASS}"
             if ! keytool -list -keystore android/app/qarib-upload.jks -storepass "$PASS" -alias qarib > /dev/null 2>&1; then
               echo "::error::مفتاح التوقيع أو الباسورد مش مظبوطين في GitHub Secrets (KEYSTORE_BASE64 / KEYSTORE_PASSWORD)"
               exit 1
