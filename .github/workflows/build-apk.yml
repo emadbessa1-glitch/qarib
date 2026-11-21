@@ -32,10 +32,16 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            # بنشيل أي مسافات أو سطور زيادة ممكن تكون اتنسخت مع القيم.
+            PASS=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '[:space:]')
             mkdir -p android/app
-            echo "$KEYSTORE_BASE64" | base64 -d > android/app/qarib-upload.jks
+            printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > android/app/qarib-upload.jks
+            if ! keytool -list -keystore android/app/qarib-upload.jks -storepass "$PASS" -alias qarib > /dev/null 2>&1; then
+              echo "::error::مفتاح التوقيع أو الباسورد مش مظبوطين في GitHub Secrets (KEYSTORE_BASE64 / KEYSTORE_PASSWORD)"
+              exit 1
+            fi
             printf 'storeFile=qarib-upload.jks\nstorePassword=%s\nkeyAlias=qarib\nkeyPassword=%s\n' \
-              "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > android/key.properties
+              "$PASS" "$PASS" > android/key.properties
             echo "Signing with the release key"
           else
             echo "::warning::No signing key secrets; building with a temporary debug key"
